@@ -22,7 +22,6 @@ import '../../models/codex/codex_quota_format.dart';
 import '../../models/codex/codex_service.dart';
 import '../../models/codex/codex_usage.dart';
 import '../../models/auxiliary_model_menu.dart';
-import '../../models/featured_upstreams.dart';
 import '../../models/magpie.dart';
 import '../../models/magpie_follow.dart';
 import '../../models/model_icons.dart';
@@ -38,7 +37,6 @@ import '../../chat/widgets/pixel_loader.dart';
 import '../../workspace/workspace.dart';
 import '../../workspace/window_controls.dart';
 import 'codex_import_dialog.dart';
-import 'featured_upstreams_strip.dart';
 import 'model_dialogs.dart';
 import 'settings_dropdown.dart';
 import 'settings_widgets.dart';
@@ -82,7 +80,6 @@ class ModelsSettingsPage extends StatefulWidget {
     this.testModel = testModelThroughClaudeCode,
     this.codex,
     this.workspace,
-    this.featured,
     this.magpie,
     this.claudeResets,
   });
@@ -104,10 +101,6 @@ class ModelsSettingsPage extends StatefulWidget {
   /// Whose icon picker an upstream's icon is picked in (its pictures, the
   /// icons picked last); none picked when null.
   final Workspace? workspace;
-
-  /// The upstreams shown cards of; the app's when null (see
-  /// [FeaturedUpstreamsStrip]).
-  final Future<List<FeaturedUpstream>>? featured;
 
   /// An upstream to open the page of, as the page shows next (or now, if
   /// it does): one just imported. Taken as it is opened.
@@ -154,24 +147,11 @@ class _ModelsSettingsPageState extends State<ModelsSettingsPage> {
   /// Adding the upstream that follows magpie, while it is under way.
   bool _joining = false;
 
-  /// The sites listed (see [ModelsSettingsPage.featured]).
-  late final Future<List<FeaturedUpstream>> _featured =
-      widget.featured ?? FeaturedUpstream.load();
-
-  /// The hosts of [_featured], once got, then of the list got again behind
-  /// it as it answers: their upstreams lead the list.
-  Set<String> _listedHosts = const {};
-  bool _relisted = false;
-
-  /// Whether [_featured] is the app's, got again behind it.
-  bool get _follows => widget.featured == null;
-
   @override
   void initState() {
     super.initState();
     _reveal();
     ModelsSettingsPage.reveal.addListener(_reveal);
-    if (_follows) FeaturedUpstream.known.addListener(_relist);
     if (_providers.builtinAvailable) unawaited(_claudeResets.refresh());
     // magpie's models as it has them now; else whether it is here, to be
     // offered. Not as the page is built: it says so to its listeners.
@@ -180,31 +160,11 @@ class _ModelsSettingsPageState extends State<ModelsSettingsPage> {
         _magpie.provider != null ? _magpie.sync() : _magpie.check(),
       ),
     );
-    unawaited(
-      _featured.then((listed) {
-        // Not where the new list answered before it.
-        if (mounted && !_relisted) _takeHosts(listed);
-      }),
-    );
-  }
-
-  void _takeHosts(List<FeaturedUpstream> listed) {
-    setState(() => _listedHosts = {for (final u in listed) ...u.hosts});
-  }
-
-  /// The list [FeaturedUpstream.load] got again; an empty one changes
-  /// nothing.
-  void _relist() {
-    final listed = FeaturedUpstream.known.value;
-    if (listed.isEmpty || !mounted) return;
-    _relisted = true;
-    _takeHosts(listed);
   }
 
   @override
   void dispose() {
     ModelsSettingsPage.reveal.removeListener(_reveal);
-    if (_follows) FeaturedUpstream.known.removeListener(_relist);
     super.dispose();
   }
 
@@ -353,12 +313,7 @@ class _ModelsSettingsPageState extends State<ModelsSettingsPage> {
 
   Widget _list(BuildContext context) {
     final l10n = context.l10n;
-    // The newest such: one imported later takes the place of one before.
     final providers = _providers.providers;
-    ModelProvider? pinned;
-    for (final provider in providers) {
-      if (_listedHosts.contains(provider.host.toLowerCase())) pinned = provider;
-    }
     final magpie = _magpie.provider;
     // Known not to answer; not before it is asked.
     final magpieDown = _magpie.status?.running == false;
@@ -366,11 +321,6 @@ class _ModelsSettingsPageState extends State<ModelsSettingsPage> {
     final shown = _defaultName(context, current);
     return SettingsPage(
       title: l10n.modelsTitle,
-      lead: FeaturedUpstreamsStrip(
-        upstreams: _featured,
-        follow: _follows,
-        hosts: [for (final provider in _providers.providers) provider.host],
-      ),
       children: [
         SettingsCard(
           children: [
@@ -446,10 +396,7 @@ class _ModelsSettingsPageState extends State<ModelsSettingsPage> {
             // in their order.
             for (final provider in [
               ?magpie,
-              ?pinned,
-              ...providers.where(
-                (provider) => provider != pinned && provider != magpie,
-              ),
+              ...providers.where((provider) => provider != magpie),
             ])
               _ProviderRow(
                 icon: ProviderIconView(

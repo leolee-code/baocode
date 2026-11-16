@@ -112,10 +112,6 @@ class DataDirectory {
   /// (see icon_library.dart).
   String get iconsDir => p.join(path, 'icons');
 
-  /// The app's updates, downloaded and checked, waiting to be installed
-  /// (see lib/update/update_io.dart).
-  String get updatesDir => p.join(path, 'updates');
-
   /// The errors the app did not handle, for a user to send (see
   /// error_log.dart).
   String get logsDir => p.join(path, 'logs');
@@ -127,10 +123,6 @@ class DataDirectory {
   /// What the browser's bridge keeps (see lib/browser/): `connected`, the
   /// mark that a browser has connected once.
   String get browserDir => p.join(path, 'browser');
-
-  /// The bots: `bots.json` listing them, and a folder each, where its
-  /// conversation runs and its memory is kept (see lib/bots/).
-  String get botsDir => p.join(path, 'bots');
 
   /// The pictures agents made where they did not say where (see
   /// lib/images/image_tools.dart): kept, as the conversations that show
@@ -154,6 +146,9 @@ class DataDirectory {
     'logs',
     'extensions',
     'browser',
+    // The browser extension, written out to be loaded unpacked (see
+    // lib/browser/extension_folder.dart).
+    'browser-extension',
     'images',
     // Where the providers' keys are kept where the system has no keychain
     // of its own (Windows' DPAPI files, Linux's fallback; see

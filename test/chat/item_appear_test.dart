@@ -57,7 +57,7 @@ class _LiveFeed extends ChangeNotifier implements ChatFeed {
   ({int index, ComposerDraft draft})? editing;
 
   @override
-  void editMessage(int index, ComposerMessage message, {UserPlace? from}) {}
+  void editMessage(int index, ComposerMessage message) {}
 
   @override
   VoidCallback? moveToBackgroundAt(int index) => null;

@@ -33,7 +33,6 @@ import 'package:baocode/kernel/kernel_types.dart';
 import 'package:baocode/kernel/mock/mock_kernels.dart';
 import 'package:baocode/kernel/queued_messages.dart';
 import 'package:baocode/kernel/transcript.dart';
-import 'package:baocode/link/chat_codec.dart' show ChatCodec;
 import 'package:baocode/usage/usage_ledger.dart';
 import 'package:baocode/usage/usage_prices.dart';
 
@@ -1143,10 +1142,6 @@ void main() {
         [for (final m in messages) (m.fromAgent, m.text)],
         [('Count entries', 'B is done.'), ('zz9', 'Hi')],
       );
-      // As the phone gets it.
-      final decoded =
-          ChatCodec.decode(ChatCodec.encode(messages.first)) as UserMessageItem;
-      expect(decoded.fromAgent, 'Count entries');
     });
 
     test("a Windows path's file shows by its name", () {
@@ -6381,29 +6376,28 @@ void main() {
       return settings.isEmpty ? null : settings;
     }
 
-    test('is the setting\'s, BaoCode when unset or unknown', () {
-      expect(CommitAttribution.parse(null), CommitAttribution.baocode);
+    test('is the setting\'s, none when unset or unknown', () {
+      expect(CommitAttribution.parse(null), CommitAttribution.none);
       expect(CommitAttribution.parse('none'), CommitAttribution.none);
       expect(CommitAttribution.parse('agent'), CommitAttribution.agent);
-      expect(CommitAttribution.parse('claude'), CommitAttribution.baocode);
-      expect(CommitAttribution.parse(1), CommitAttribution.baocode);
+      expect(CommitAttribution.parse('claude'), CommitAttribution.none);
+      expect(CommitAttribution.parse('baocode'), CommitAttribution.none);
+      expect(CommitAttribution.parse(1), CommitAttribution.none);
     });
 
     test('is passed as Claude Code\'s attribution setting, but for the '
         'agent\'s own', () {
       ClaudeLaunch launch(CommitAttribution attribution) =>
           ClaudeLaunch(cwd: '/p', attribution: attribution);
-      expect(flagSettings(launch(CommitAttribution.baocode)), {
-        'attribution': {
-          'commit': 'Co-Authored-By: BaoCode <noreply@baocode.dev>',
-          'pr': '🤖 Generated with [BaoCode](https://baocode.dev)',
-        },
-      });
       expect(flagSettings(launch(CommitAttribution.none)), {
         'attribution': {'commit': '', 'pr': ''},
       });
       expect(flagSettings(launch(CommitAttribution.agent)), isNull);
-      expect(flagSettings(const ClaudeLaunch(cwd: '/p')), isNull);
+      // A launch that says nothing credits no one (docs/egress-policy.md,
+      // rule 3): not Claude Code's own trailer either.
+      expect(flagSettings(const ClaudeLaunch(cwd: '/p')), {
+        'attribution': {'commit': '', 'pr': ''},
+      });
       expect(
         flagSettings(
           const ClaudeLaunch(

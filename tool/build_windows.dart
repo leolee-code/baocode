@@ -3,27 +3,15 @@
 //
 //   dart run tool/build_windows.dart                build, then package
 //   dart run tool/build_windows.dart --skip-build   package what is built
-//   dart run tool/build_windows.dart --build-only   build, not package (CI,
-//                                                  while the remote server
-//                                                  is still building)
+//   dart run tool/build_windows.dart --build-only   build, not package
 //   dart run tool/build_windows.dart --remote-built take the remote server
 //                                                  already in build\remote\
-//                                                  (CI builds it once, for
-//                                                  both apps)
-//   dart run tool/build_windows.dart --remote-release [VERSION]
-//                                                  take the remote server
-//                                                  published (the newest
-//                                                  without VERSION; tool/
-//                                                  fetch_remote_server.dart)
-//                                                  instead of building one
+//                                                  (built here, and on the
+//                                                  other machines, gathered
+//                                                  with --from)
 //   dart run tool/build_windows.dart --patched-engine
 //                                                  put in tool/engine's
 //                                                  flutter_windows.dll (x64)
-//   dart run tool/build_windows.dart --channel      the channel build
-//                                                  (BAOCODE_CHANNEL;
-//                                                  lib/channel/), its
-//                                                  installer named
-//                                                  -setup-channel.exe
 //   dart run tool/build_windows.dart --arch arm64   say which processor
 //                                                  flutter builds for: this
 //                                                  machine's (flutter builds
@@ -40,7 +28,8 @@
 //
 // The bundle carries OpenSSH for Windows (openssh\), Microsoft's build, for
 // remote projects where the system's ssh is too old to ask for a password
-// (Windows 10's 8.1): downloaded once into build\openssh\ and checked.
+// (Windows 10's 8.1): downloaded from GitHub once, as this is built, into
+// build\openssh\ and checked. Nothing of it is fetched by the app.
 //
 // The Dart code's symbols are saved as it is built, to build\symbols\
 // app.windows-<x64|arm64>.symbols: the hang reports name its frames by their
@@ -48,10 +37,9 @@
 // `llvm-symbolizer --obj=` that file turns into functions and lines. Only
 // saved: the app's own stack traces stay as they were, named.
 //
-// The installer lands in build/installers/; beside it, remote\<VERSION>\,
-// the remote server's gzipped builds, which the app downloads instead of
-// carrying them (tool/build_remote_server.dart), to upload with the
-// release.
+// The installer lands in build/installers/. The bundle carries the remote
+// server's builds (tool/build_remote_server.dart): nothing is downloaded
+// for a remote host.
 import 'dart:ffi' show Abi;
 import 'dart:io';
 
@@ -82,8 +70,6 @@ const _required = [
   'msvcp140.dll',
   'vcruntime140.dll',
   'vcruntime140_1.dll',
-  // The phones' link: iroh (bao_iroh's hook/build.dart builds it).
-  'bao_iroh.dll',
   r'data\app.so',
   r'data\icudtl.dat',
   r'data\flutter_assets',
@@ -134,14 +120,6 @@ Future<void> main(List<String> arguments) async {
     _fail('--skip-build and --build-only leave nothing to do.');
   }
   final remoteBuilt = arguments.contains('--remote-built');
-  final releaseAt = arguments.indexOf('--remote-release');
-  final remoteRelease = releaseAt < 0
-      ? null
-      : releaseAt + 1 < arguments.length &&
-            !arguments[releaseAt + 1].startsWith('--')
-      ? arguments[releaseAt + 1]
-      : 'latest';
-  final channel = arguments.contains('--channel');
   final archAt = arguments.indexOf('--arch');
   final arch = archAt >= 0 && archAt + 1 < arguments.length
       ? arguments[archAt + 1]
@@ -164,17 +142,13 @@ Future<void> main(List<String> arguments) async {
   final version = _readVersion(File('${root.path}\\pubspec.yaml'));
 
   if (!skipBuild) {
-    _step(
-      'Building the Release bundle for $arch'
-      '${channel ? ' (the channel build)' : ''}',
-    );
+    _step('Building the Release bundle for $arch');
     final symbols = Directory('${root.path}\\$_symbolsRelative')
       ..createSync(recursive: true);
     await _run('flutter', [
       'build',
       'windows',
       '--release',
-      if (channel) '--dart-define=BAOCODE_CHANNEL=true',
       // Not --split-debug-info, which would also leave the app's stack
       // traces (errors.log) unnamed, as offsets.
       '--extra-gen-snapshot-options=--save-debugging-info='
@@ -200,24 +174,12 @@ Future<void> main(List<String> arguments) async {
 
   // The server remote projects run on their host (Linux and macOS, x64 and
   // arm64; macOS ones only when built on a Mac):
-  // which build, and where it is downloaded from, beside the executable
-  // (the installer takes the bundle whole); not the builds themselves,
-  // which the app downloads.
-  final remote = Directory(
-    '${root.path}\\build\\${remoteRelease == null ? 'remote' : 'remote-release'}',
-  );
-  if (remoteRelease != null) {
-    _step('Taking the remote server published');
-    await _run(Platform.resolvedExecutable, [
-      'run',
-      '${root.path}\\tool\\fetch_remote_server.dart',
-      remoteRelease,
-      '--out',
-      remote.path,
-    ], root.path);
-  } else if (remoteBuilt) {
+  // which build, and the builds themselves, beside the executable (the
+  // installer takes the bundle whole).
+  final remote = Directory('${root.path}\\build\\remote');
+  if (remoteBuilt) {
     _step('Using the remote server already built');
-    if (!File('${remote.path}\\servers.json').existsSync()) {
+    if (!File('${remote.path}\\VERSION').existsSync()) {
       _fail('No remote server built in ${remote.path}.');
     }
   } else {
@@ -233,13 +195,15 @@ Future<void> main(List<String> arguments) async {
   // The builds an older run put there go.
   if (bundleRemote.existsSync()) bundleRemote.deleteSync(recursive: true);
   bundleRemote.createSync(recursive: true);
-  for (final name in ['VERSION', 'servers.json']) {
-    File('${remote.path}\\$name').copySync('${bundleRemote.path}\\$name');
+  for (final file in remote.listSync()) {
+    final name = file.uri.pathSegments.last;
+    if (file is File &&
+        (name == 'VERSION' ||
+            RegExp(r'^baocode-server-[a-z0-9-]+$').hasMatch(name))) {
+      file.copySync('${bundleRemote.path}\\$name');
+    }
   }
-  _checkBundle(bundle, [r'remote\VERSION', r'remote\servers.json']);
-  final remoteVersion = File('${remote.path}\\VERSION')
-      .readAsStringSync()
-      .trim();
+  _checkBundle(bundle, [r'remote\VERSION']);
 
   _step('Putting in OpenSSH for Windows $_openSshRelease ($arch)');
   await _putOpenSsh(root, bundle, arch);
@@ -253,51 +217,17 @@ Future<void> main(List<String> arguments) async {
     '/DAppVersion=${version.full}',
     '/DOutDir=${installers.path}',
     '/DArch=$arch',
-    if (channel) '/DEdition=-channel',
     '${root.path}\\tool\\baocode.iss',
   ], root.path);
-
-  // None when published already (--remote-release).
-  final downloads = Directory('${installers.path}\\remote\\$remoteVersion');
-  final builds = [
-    for (final file in remote.listSync())
-      if (file is File && file.path.endsWith('.gz')) file,
-  ];
-  if (builds.isNotEmpty) {
-    _step('Putting the remote server\'s builds beside it');
-    downloads.createSync(recursive: true);
-  }
-  final servers = [
-    for (final file in builds)
-      file.copySync('${downloads.path}\\${file.uri.pathSegments.last}'),
-  ];
 
   _step('Done');
   final installer = File(
     '${installers.path}\\BaoCode-${version.marketing}-setup'
-    '${arch == 'x64' ? '' : '-$arch'}${channel ? '-channel' : ''}.exe',
+    '${arch == 'x64' ? '' : '-$arch'}.exe',
   );
-  for (final file in [installer, ...servers]) {
-    if (!file.existsSync()) continue;
-    final mb = (file.lengthSync() / (1024 * 1024)).toStringAsFixed(1);
-    stdout.writeln('  ${file.path}  ($mb MB)');
-  }
-  if (servers.isEmpty) {
-    stdout
-      ..writeln()
-      ..writeln('The app downloads the remote server published:')
-      ..writeln('  https://dl.baocode.dev/releases/remote/$remoteVersion/');
-  } else {
-    stdout
-      ..writeln()
-      ..writeln('Upload the remote server\'s builds, which the app downloads')
-      ..writeln('(their folder is named by the build: the macOS one\'s, if it')
-      ..writeln('differs, goes beside it; or publish them with a server-* tag')
-      ..writeln('and package with --remote-release):')
-      ..writeln(
-        '  ${downloads.path}\\*  ->  '
-        'https://dl.baocode.dev/releases/remote/$remoteVersion/',
-      );
+  if (installer.existsSync()) {
+    final mb = (installer.lengthSync() / (1024 * 1024)).toStringAsFixed(1);
+    stdout.writeln('  ${installer.path}  ($mb MB)');
   }
   stdout.writeln();
   stdout.writeln(

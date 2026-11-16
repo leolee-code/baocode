@@ -37,7 +37,7 @@ class _Feed extends ChangeNotifier implements ChatFeed {
   @override
   set editing(({int index, ComposerDraft draft})? value) {}
   @override
-  void editMessage(int index, ComposerMessage message, {UserPlace? from}) {}
+  void editMessage(int index, ComposerMessage message) {}
   @override
   VoidCallback? moveToBackgroundAt(int index) => null;
   @override

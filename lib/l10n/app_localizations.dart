@@ -16993,6 +16993,30 @@ abstract class AppLocalizations {
   /// **'Agents can\'t open local HTML files or upload files. In chrome://extensions, click Details on BaoCode and turn on Allow access to file URLs.'**
   String get browserSettingsNoFileAccessDescription;
 
+  /// No description provided for @browserExtensionFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Load It Unpacked'**
+  String get browserExtensionFolder;
+
+  /// No description provided for @browserExtensionFolderDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'BaoCode carries the extension; nothing is downloaded. Click Show Folder, then in chrome://extensions turn on Developer mode at the top right, click Load unpacked and choose that folder. After BaoCode updates, click Show Folder again and reload the extension there.'**
+  String get browserExtensionFolderDescription;
+
+  /// No description provided for @browserExtensionShowFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Folder'**
+  String get browserExtensionShowFolder;
+
+  /// No description provided for @browserExtensionFolderFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The extension\'s folder could not be written: {error}'**
+  String browserExtensionFolderFailed(String error);
+
   /// No description provided for @browserSettingsInstall.
   ///
   /// In en, this message translates to:
@@ -17164,7 +17188,7 @@ abstract class AppLocalizations {
   /// No description provided for @browserWelcomeInstall.
   ///
   /// In en, this message translates to:
-  /// **'For Chrome, Edge, Brave and Arc. It connects by itself, and this turns green.'**
+  /// **'For Chrome, Edge, Brave and Arc. Click Show Folder, turn on Developer mode in chrome://extensions, click Load unpacked and choose it. It connects by itself, and this turns green.'**
   String get browserWelcomeInstall;
 
   /// No description provided for @browserWelcomeTurnedOff.
@@ -17182,7 +17206,7 @@ abstract class AppLocalizations {
   /// No description provided for @browserWelcomeTry.
   ///
   /// In en, this message translates to:
-  /// **'Try telling an agent: “Open baocode.dev and look at the download page.”'**
+  /// **'Try telling an agent: “Open example.com and tell me what the page says.”'**
   String get browserWelcomeTry;
 
   /// No description provided for @browserWelcomeUnpacked.

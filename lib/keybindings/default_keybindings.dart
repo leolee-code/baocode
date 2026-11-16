@@ -40,9 +40,6 @@ const uninstallShellCommandId = 'workbench.action.uninstallCommandLine';
 /// VS Code's File menu Auto Save does.
 const toggleAutoSaveCommandId = 'workbench.action.toggleAutoSave';
 
-/// Check for Updates...: looks for a new version of the app now.
-const checkForUpdatesCommandId = 'update.checkForUpdate';
-
 /// Show Setup Guide: the setup checklist back (see FeatureTipsController).
 const showSetupGuideCommandId = 'baocode.tips.showSetupGuide';
 
@@ -165,7 +162,6 @@ final Map<String, CommandInfo> commandCatalog = {
       "Uninstall 'code' command from PATH",
       category: 'Shell Command',
     ),
-    const CommandInfo(checkForUpdatesCommandId, 'Check for Updates...'),
     const CommandInfo(
       showSetupGuideCommandId,
       'Show Setup Guide',

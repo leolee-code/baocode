@@ -8,12 +8,11 @@
 //   dart run tool/bump_version.dart major     1.2.0+12 -> 2.0.0+13
 //   dart run tool/bump_version.dart 1.2.3     1.2.0+12 -> 1.2.3+13
 //
-// The build number only ever goes up: the app is offered an update when
-// the manifest's version is newer than its own, build numbers counted
-// (docs/auto-update.md). It drafts the release's notes too
-// (tool/draft_release_notes.dart). Rewrite them, make the site's changelog
-// (tool/build_changelog.dart), then commit, and push the tag it prints: CI
-// builds and publishes the release (.github/workflows/release.yml).
+// The build number only ever goes up, so that one install of the app can be
+// told from an older one. It drafts the release's notes too
+// (tool/draft_release_notes.dart). Then commit, and build the installers
+// (tool/build_macos.dart, tool/build_windows.dart): nothing is published,
+// and the app does not update itself (docs/egress-policy.md).
 import 'dart:io';
 
 import 'package:baocode/update/version.dart';

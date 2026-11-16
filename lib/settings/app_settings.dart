@@ -2,11 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import '../bash_exe/bao_bash.dart';
-import '../bash_exe/bao_bash_view.dart';
-import '../channel/channel_gate.dart';
-import '../channel/channel_setup.dart' show ChannelSetup;
-import '../diagnostics/diagnostics_upload.dart';
 import '../forge/forge_accounts.dart';
 import '../customize/customization_store.dart';
 import '../kernel/claude_code/claude_path_setting.dart';
@@ -17,14 +12,12 @@ import '../keybindings/keybindings_sync.dart';
 import '../keybindings/keymap.dart';
 import '../keybindings/vscode_import.dart';
 import '../l10n/l10n.dart';
-import '../link/link_host.dart';
 import '../models/model_providers.dart';
 import '../stash/stash_controller.dart';
 import '../theme/workbench_theme.dart' show WorkbenchThemeService;
 import '../tips/builtin_tips.dart';
 import '../tips/feature_tip.dart';
 import '../tips/feature_tips_controller.dart';
-import '../update/update_controller.dart';
 import '../usage/ui/usage_dashboard.dart';
 import '../workspace/workspace.dart';
 import 'app_locale.dart';
@@ -32,21 +25,17 @@ import 'pages/about_page.dart';
 import 'pages/accounts_page.dart';
 import 'pages/appearance_page.dart';
 import 'pages/browser_page.dart';
-import 'pages/channel_account_page.dart';
 import 'pages/customize_page.dart';
 import 'pages/data_dir_page.dart';
 import 'pages/general_page.dart';
 import 'pages/keybindings_page.dart';
-import 'pages/mobile_page.dart';
 import 'pages/models_page.dart';
 import 'pages/language_page.dart';
 import 'pages/network_page.dart';
 import 'pages/notifications_page.dart';
-import 'pages/settings_widgets.dart' show SettingsPage;
 import 'pages/ssh_page.dart';
 import 'pages/stash_hotkey_field.dart';
 import 'pages/stash_page.dart';
-import 'pages/updates_page.dart';
 import 'settings_dialog.dart';
 import 'user_settings.dart';
 
@@ -61,11 +50,8 @@ class AppSettings {
     this.catalog,
     this.sync,
     this.installs,
-    this.updates,
-    this.diagnostics,
     this.workspace,
     this.claudeStatus,
-    this.link,
     this.customizations,
   }) : keybindings = keybindings ?? KeybindingService.instance;
 
@@ -88,17 +74,6 @@ class AppSettings {
   /// them from; none under test.
   final VsCodeInstalls? installs;
 
-  /// Updating the app: Settings → Updates, Check for Updates; none where
-  /// the build does not update itself.
-  final UpdateController? updates;
-
-  /// Uploads the diagnostic logs, from Settings → Updates; none under test.
-  final DiagnosticsUploader? diagnostics;
-
-  /// The link with the phones paired, for Settings → Mobile; none under
-  /// test, nor on the web.
-  final LinkHost? link;
-
   /// The Claude Code that runs on this machine, for Settings → General;
   /// none under test, where it is not looked for.
   final Future<LocalClaudeStatus?> Function()? claudeStatus;
@@ -117,13 +92,6 @@ class AppSettings {
           files?.settings[FeatureTipsController.enabledSetting] != false,
       settingsChanges: files?.settings,
     ),
-    null => null,
-  };
-
-  /// BaoCode Bash, where it is offered (Windows, with settings files);
-  /// main() makes it the app's ([BaoBash.current]).
-  late final BaoBash? bash = switch (files?.storage) {
-    final storage? => BaoBash.forPlatform(_TipStorage(storage)),
     null => null,
   };
 
@@ -154,10 +122,7 @@ class AppSettings {
   ) => Column(
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      if (bash case final bash?) BaoBashNotice(bash: bash),
-      BrowserHistoryNotice(open: () => open(SettingsSection.browser)),
-    ],
+    children: [BrowserHistoryNotice(open: () => open(SettingsSection.browser))],
   );
 
   /// [section]'s page of the settings dialog.
@@ -168,7 +133,6 @@ class AppSettings {
           settings: files?.settings,
           tips: tips,
           claudeStatus: claudeStatus,
-          bash: bash,
         );
       case SettingsSection.appearance:
         final themes = WorkbenchThemeService.instance;
@@ -177,8 +141,6 @@ class AppSettings {
           changes: themes,
           settings: files?.settings,
         );
-      case SettingsSection.models when ChannelSetup.channelBuild:
-        return ChannelAccountPage(gate: ChannelGate.current);
       case SettingsSection.models:
         return ModelsSettingsPage(
           providers: ModelProviders.current,
@@ -190,15 +152,6 @@ class AppSettings {
         return NetworkSettingsPage(settings: files?.settings);
       case SettingsSection.ssh:
         return SshSettingsPage(workspace: workspace);
-      case SettingsSection.mobile:
-        return switch (link) {
-          final link? => MobileSettingsPage(host: link),
-          null => SettingsPage(
-            title: context.l10n.settingsSectionMobile,
-            description: context.l10n.mobileSettingsDescription,
-            children: const [],
-          ),
-        };
       case SettingsSection.browser:
         return BrowserSettingsPage(settings: files?.settings);
       case SettingsSection.notifications:
@@ -235,14 +188,8 @@ class AppSettings {
                   ),
           ),
         );
-      case SettingsSection.updates:
-        return UpdatesSettingsPage(
-          updates: updates,
-          settings: files?.settings,
-          diagnostics: diagnostics,
-        );
       case SettingsSection.about:
-        return AboutSettingsPage(host: link);
+        return const AboutSettingsPage();
       case SettingsSection.dataDirectory:
         return const DataDirectoryPage();
     }

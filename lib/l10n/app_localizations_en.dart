@@ -10416,6 +10416,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Agents can\'t open local HTML files or upload files. In chrome://extensions, click Details on BaoCode and turn on Allow access to file URLs.';
 
   @override
+  String get browserExtensionFolder => 'Load It Unpacked';
+
+  @override
+  String get browserExtensionFolderDescription =>
+      'BaoCode carries the extension; nothing is downloaded. Click Show Folder, then in chrome://extensions turn on Developer mode at the top right, click Load unpacked and choose that folder. After BaoCode updates, click Show Folder again and reload the extension there.';
+
+  @override
+  String get browserExtensionShowFolder => 'Show Folder';
+
+  @override
+  String browserExtensionFolderFailed(String error) {
+    return 'The extension\'s folder could not be written: $error';
+  }
+
+  @override
   String get browserSettingsInstall => 'Get the Extension';
 
   @override
@@ -10515,7 +10530,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browserWelcomeInstall =>
-      'For Chrome, Edge, Brave and Arc. It connects by itself, and this turns green.';
+      'For Chrome, Edge, Brave and Arc. Click Show Folder, turn on Developer mode in chrome://extensions, click Load unpacked and choose it. It connects by itself, and this turns green.';
 
   @override
   String get browserWelcomeTurnedOff =>
@@ -10528,7 +10543,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browserWelcomeTry =>
-      'Try telling an agent: “Open baocode.dev and look at the download page.”';
+      'Try telling an agent: “Open example.com and tell me what the page says.”';
 
   @override
   String get browserWelcomeUnpacked => 'Developer Mode Zip';

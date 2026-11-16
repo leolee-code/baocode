@@ -177,19 +177,6 @@ void main() {
     expect(reportText(utf8.encode('{"a":"é"}')), '{"a":"é"}');
   });
 
-  test("the machine's key goes, the rest stays", () {
-    expect(
-      redactCrashReport(
-        '{\n  "pid" : 1980,\n'
-        '  "crashReporterKey" : "742F288F-5181-E91C-D926-856AE707E206",\n'
-        '  "procName" : "BaoCode"\n}',
-      ),
-      '{\n  "pid" : 1980,\n'
-      '  "crashReporterKey" : "",\n'
-      '  "procName" : "BaoCode"\n}',
-    );
-  });
-
   group('describeCrashReport', () {
     test("macOS': the exception, the signal, the termination", () {
       expect(

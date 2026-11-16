@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:convert' show jsonEncode;
-import 'dart:ui' show AppExitResponse, AppExitType;
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart'
     show kDebugMode, kIsWeb, visibleForTesting;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show ServicesBinding;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:path/path.dart' as p;
 import 'package:bao_editor/textmate/textmate_syntax.dart';
@@ -16,12 +15,9 @@ import 'package:bao_editor/monaco/flutter/language_assets.dart';
 
 import 'base/quiet_view.dart';
 import 'base/smooth_scroll.dart' show BaoScrollBehavior;
-import 'bash_exe/bao_bash.dart';
-import 'bots/bots.dart';
 import 'browser/browser_bridge.dart';
 import 'browser/browser_tools.dart' show BrowserHistory;
 import 'chat/composer/composer_files.dart' show ComposerFile, pastedAsPicture;
-import 'chat/chat_session.dart';
 import 'chat/chat_width.dart';
 import 'chat/reply_scroll.dart';
 import 'chat/edit_detail.dart';
@@ -37,7 +33,6 @@ import 'diagnostics/crash_reports.dart';
 import 'diagnostics/exit_watch.dart';
 import 'diagnostics/frame_watch.dart';
 import 'diagnostics/hang_watch.dart';
-import 'diagnostics/diagnostics_upload.dart';
 import 'extensions/theme_extensions.dart';
 import 'ide/editor_minimap_setting.dart';
 import 'ide/editor_word_wrap.dart';
@@ -69,18 +64,15 @@ import 'workspace/session_tools.dart';
 import 'chat/composer/composer_polish.dart' show ComposerPolishSetting;
 import 'kernel/queued_messages.dart';
 import 'keybindings/keybindings_sync.dart';
-import 'link/link_host.dart';
 import 'keybindings/keymap.dart';
 import 'keybindings/vscode_import.dart';
 import 'l10n/l10n.dart';
-import 'models/featured_upstreams.dart';
 import 'models/magpie_follow.dart';
 import 'models/model_icons.dart';
 import 'models/model_providers.dart';
 import 'models/model_runtime.dart';
 import 'models/model_welcome.dart';
 import 'network/network_proxy.dart';
-import 'notifications/attention_host.dart';
 import 'notifications/attention_settings.dart';
 import 'platform/memory_budget.dart';
 import 'platform/native_md_clipboard.dart';
@@ -96,17 +88,11 @@ import 'remote/remote_claude.dart';
 import 'remote/ssh_host.dart';
 import 'search/claude_conversation_search.dart';
 import 'search/conversation_search.dart';
-import 'channel/account/account_send.dart';
-import 'channel/account/channel_account.dart';
-import 'channel/channel_gate.dart';
-import 'channel/channel_setup.dart';
-import 'channel/channel_setup_platform.dart';
 import 'settings/app_locale.dart';
 import 'settings/app_settings.dart';
 import 'settings/data_dir_startup.dart';
 import 'settings/user_settings.dart';
 import 'sidebar/sidebar_times.dart';
-import 'telemetry/telemetry_platform.dart';
 import 'stash/stash_editor.dart' show StashEditor;
 import 'forge/forge_accounts.dart';
 import 'forge/forge_io_stub.dart'
@@ -118,8 +104,6 @@ import 'stash/stash_disk.dart';
 import 'stash/stash_panel_view.dart';
 import 'stash/stash_settings.dart';
 import 'stash/stash_store.dart';
-import 'telemetry/telemetry_service.dart';
-import 'telemetry/telemetry_store.dart';
 import 'theme/app_theme.dart';
 import 'theme/code_font.dart';
 import 'theme/pixel_snapped_text_scaler.dart';
@@ -127,12 +111,6 @@ import 'theme/ui_zoom.dart';
 import 'theme/window_blur.dart';
 import 'theme/workbench_theme.dart';
 import 'theme/theme_transition.dart';
-import 'update/update_controller.dart';
-import 'update/update_platform.dart';
-import 'update/update_service.dart';
-import 'update/update_settings.dart';
-import 'update/update_store.dart';
-import 'update/version.dart';
 import 'usage/usage_ledger.dart';
 import 'usage/usage_prices.dart';
 import 'usage/usage_storage.dart';
@@ -141,7 +119,6 @@ import 'window/code_args.dart';
 import 'window/window_host.dart';
 import 'window/window_settings.dart';
 import 'workbench.dart';
-import 'workspace/editor_launcher.dart';
 import 'workspace/agent_title.dart';
 import 'workspace/main_window.dart';
 import 'workspace/preference_store.dart';
@@ -203,9 +180,6 @@ Future<void> main(List<String> arguments) async {
       (key) => files.settings[key],
     ).timeout(const Duration(seconds: 1), onTimeout: () {});
     followSettingsFiles(files);
-    // The channel build's first start: set up before anything else shows.
-    await _beginChannelSetup(files);
-    _openChannelGate(files);
   }
   // Emoji as pictures: fetched into the cache the first run, in the
   // background, through the proxy.
@@ -252,38 +226,6 @@ Future<void> main(List<String> arguments) async {
   // Claude Code's skills, agents, commands, rules, servers, hooks and
   // plugins: the Customize view beside the chat, and Settings → Customize.
   final customizations = CustomizationStore();
-  // The phones paired with this computer (Settings → Mobile): listening
-  // for them, if they are allowed to connect.
-  // The user's bots: agents that chat as a person does, with the phones.
-  final bots = kIsWeb
-      ? null
-      : Bots(
-          workspace: workspace,
-          store: PreferenceStore.file(
-            p.join(DataDirectory.current.botsDir, 'bots.json'),
-          ),
-          chinese:
-              (locale.locale ?? AppLocale.systemLocale()).languageCode == 'zh',
-        );
-  unawaited(bots?.start());
-  final link = kIsWeb
-      ? null
-      : LinkHost(
-          workspace: workspace,
-          customizations: customizations,
-          bots: bots,
-        );
-  if (bots != null && link != null) {
-    // The bots are the phones': with none paired, told of nothing.
-    var paired = false;
-    bots.hasPhone = () => link.phones.isNotEmpty;
-    link.addListener(() {
-      if (link.phones.isNotEmpty == paired) return;
-      paired = !paired;
-      bots.phonesChanged();
-    });
-  }
-  unawaited(link?.load());
   // The first frame is in the kept theme, restored from storage as VS Code
   // does before the workbench shows; its file is read after. The setting
   // is settings.json's `workbench.colorTheme`, the theme's colors the
@@ -413,18 +355,10 @@ Future<void> main(List<String> arguments) async {
       catalog: catalog,
       sync: sync,
       installs: VsCodeInstalls.current(),
-      updates: _startUpdates(files),
-      diagnostics: DiagnosticsUploader.platform(),
       workspace: workspace,
       claudeStatus: localClaudeStatus,
-      link: link,
       customizations: customizations,
     );
-    // Before the feature tips start: they tell it whether the app ran
-    // here before.
-    BaoBash.current = settings.bash?..noteStart();
-    ChatSession.userSent = BaoBash.current?.countSent;
-    _startTelemetry(files, link);
   }
   // The theme extensions (lib/extensions/): color and file icon themes
   // from Open VSX or a .vsix, `workbench.iconTheme` followed as
@@ -596,9 +530,6 @@ void followSettingsFiles(SettingsFiles files) {
     ),
   );
   prefetchProviderIcons(ModelProviders.current, SiteIcons.current);
-  // The logos of the sites listed, for their upstreams' icons, as kept
-  // last time (Settings → Models gets the list again).
-  unawaited(FeaturedUpstream.readKept());
   // Settings → Appearance: how wide the conversation grows.
   ChatWidth.follow(files.settings, () => files.settings[ChatWidth.settingKey]);
   // Settings → Appearance: how the user's messages show.
@@ -663,125 +594,6 @@ void followSettingsFiles(SettingsFiles files) {
   EditorWordWrap.follow(files.settings);
   // Whether the code editors show their minimap.
   EditorMinimap.follow(files.settings);
-}
-
-/// The app's updates (lib/update/): looked for as settings.json's
-/// `update.mode` says, from baocode.dev, installed as the app quits. None
-/// where the build does not update itself.
-UpdateController? _startUpdates(SettingsFiles files) {
-  final platform = platformUpdates(
-    updatesDirectory: DataDirectory.current.updatesDir,
-  );
-  if (platform == null) return null;
-  final service = UpdateService(
-    current: currentAppVersion,
-    platform: platform.platform,
-    manifestUrl: platform.manifestUrl,
-    backend: platform.backend,
-    installer: platform.installer,
-    mode: () => UpdateMode.parse(files.settings[UpdateMode.settingKey]),
-    settingsChanges: files.settings,
-    store: GlobalUpdateStore(files.storage),
-  )..start();
-  return UpdateController(
-    service: service,
-    // As the Data Folder page's Quit Now goes, but asked as any quit is.
-    quit: () async {
-      if (AppPlatform.isWindows) return ChannelAttentionHost.instance.quit();
-      await ServicesBinding.instance.exitApplication(AppExitType.cancelable);
-    },
-    openUrl: (url) => openExternal('$url'),
-    openFile: openExternal,
-  );
-}
-
-/// The channel build's first start (lib/channel/): to set up while it is
-/// pending, for the windows to show. The install's id made now, to give
-/// the page, and kept before the telemetry would make its own.
-Future<void> _beginChannelSetup(SettingsFiles files) async {
-  if (kIsWeb) return;
-  final store = GlobalChannelSetupStore(files.storage);
-  if (!ChannelSetup.begin(store)) return;
-  var id = GlobalTelemetryStore(files.storage).installId;
-  if (id == null) {
-    id = TelemetryService.randomInstallId();
-    await files.storage
-        .set(GlobalTelemetryStore.installIdKey, id)
-        .catchError(
-          (Object error) => debugPrint('install id not kept: $error'),
-        );
-  }
-  ChannelSetup.current = _channelSetup(store, id);
-}
-
-ChannelSetup _channelSetup(
-  ChannelSetupStore store,
-  String installId, {
-  String? again,
-}) => ChannelSetup(
-  store: store,
-  installId: installId,
-  again: again,
-  lookUp: lookUpChannel,
-  open: (url) => openExternal('$url'),
-);
-
-/// The channel build's way in (lib/channel/): set up, then signed in to
-/// its channel's account site, whose key is its only upstream.
-void _openChannelGate(SettingsFiles files) {
-  if (kIsWeb || !ChannelSetup.channelBuild) return;
-  final accounts = GlobalChannelAccountStore(files.storage);
-  final setupStore =
-      ChannelSetup.current?.store ?? GlobalChannelSetupStore(files.storage);
-  ChannelGate.current = ChannelGate(
-    setup: ChannelSetup.current,
-    setupStore: setupStore,
-    accountStore: accounts,
-    fetch: channelEntry,
-    // Its link opened, the setup asking takes it (workbench.dart).
-    makeSetupAgain: () => ChannelSetup.current = _channelSetup(
-      setupStore,
-      GlobalTelemetryStore(files.storage).installId ??
-          TelemetryService.randomInstallId(),
-      again: TelemetryService.randomInstallId(),
-    ),
-    makeAccount: (channel) => ChannelAccount(
-      site: channel.info.account!,
-      channelName: channel.info.name,
-      store: accounts,
-      send: sendToAccountSite,
-      listModels: listUpstreamModels,
-    ),
-  );
-}
-
-/// The app's usage data (lib/telemetry/): once a UTC day it is in front.
-/// None in a debug build.
-void _startTelemetry(SettingsFiles files, LinkHost? link) {
-  final platform = platformTelemetry();
-  if (platform == null) return;
-  // The setup's, read back as it was set.
-  final channel =
-      ChannelSetup.current?.store ?? GlobalChannelSetupStore(files.storage);
-  bool inFront() => switch (WidgetsBinding.instance.lifecycleState) {
-    null || AppLifecycleState.resumed => true,
-    _ => false,
-  };
-  final telemetry = TelemetryService(
-    current: currentAppVersion,
-    os: platform.os,
-    arch: platform.arch,
-    sender: platform.sender,
-    url: platform.url,
-    store: GlobalTelemetryStore(files.storage),
-    inFront: inFront,
-    edition: () => ChannelSetup.editionOf(channel),
-    attribution: () => channel.attribution?.toJson(),
-    linkPaths: () => link?.pathCounts.pending,
-    linkPathsSent: link?.pathCountsSent,
-  )..start();
-  // Back in front: a new day, if it is one. For the app's whole run.
-  AppLifecycleListener(onResume: telemetry.markActive);
 }
 
 class BaoCodeApp extends StatefulWidget {
@@ -885,17 +697,8 @@ class _BaoCodeAppState extends State<BaoCodeApp>
       appEvent('app', 'quit requested');
       // The unsaved files of all windows asked about at once, then the
       // agents at work; in the window in front.
-      final updates = _settings.updates?.service;
       if (!await _windows.confirmQuit()) {
         appEvent('app', 'quit cancelled');
-        updates?.disarm();
-        return AppExitResponse.cancel;
-      }
-      // Restart to Update: the installer waits for the app to go. One that
-      // will not start keeps the app (and says why).
-      final updating = updates?.armed ?? false;
-      if (updates != null && !await updates.launchArmed()) {
-        appEvent('app', 'quit cancelled: the update would not start');
         return AppExitResponse.cancel;
       }
       await Future.wait([
@@ -905,11 +708,10 @@ class _BaoCodeAppState extends State<BaoCodeApp>
         stopLspProcesses(),
         ?widget.themeExtensions?.dispose(),
         stopPtyProcesses(),
-        ?_settings.link?.stopAdvertising(),
       ]);
       // The remote hosts' servers end, and all they run with them.
       await SshHosts.instance.closeAll();
-      appExit(updating ? 'quit to update' : 'quit');
+      appExit('quit');
       return AppExitResponse.exit;
     },
   );

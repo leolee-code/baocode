@@ -4,7 +4,7 @@
 
 [Claude Code](https://github.com/anthropics/claude-code) のための、使いやすいデスクトップ UI。ミリ秒単位で応答する高速な IDE を内蔵しています。
 
-[公式サイト](https://baocode.dev) · [ダウンロード](https://baocode.dev/download) · [変更履歴](https://baocode.dev/changelog)
+> **社内フォークです。** この翻訳は上流のままで、最新ではありません。削除した機能と通信の規則は [README.md](README.md) と [docs/egress-policy.md](docs/egress-policy.md) を参照してください。
 
 ![BaoCode ユーザーの声](docs/readme/reviews.png)
 
@@ -64,9 +64,8 @@ dart run tool/build_windows.dart          # BaoCode-<version>-setup.exe（Inno S
 dart run tool/build_remote_server.dart    # Linux x64 / arm64 用の SSH リモートサーバー
 ```
 
-テスト全体の実行には時間がかかるため、変更に関連するテストだけを実行してください。例：`flutter test test/update`。
+テスト全体の実行には時間がかかるため、変更に関連するテストだけを実行してください。例：`flutter test test/policy`。
 
-`v*` タグを push すると CI がリリースをビルドして公開します。バージョン、署名、公開先については [docs/release.md](docs/release.md) を参照してください。[docs/](docs) には[自動更新](docs/auto-update.md)、[SSH リモート](docs/ssh-remote.md)、[Windows](docs/windows.md) の文書もあります。一部は中国語です。
 
 ## リポジトリ構成
 

@@ -17,12 +17,6 @@
   #error OutDir is not defined: pass /DOutDir=<folder for the installer>
 #endif
 
-; The channel build's (tool/build_windows.dart --channel): "-channel", after
-; the installer's name. The same app either way, installed over the other.
-#ifndef Edition
-  #define Edition ""
-#endif
-
 ; The processor the bundle was built for (tool/build_windows.dart passes
 ; it): x64, or arm64, whose installer's name says so ("-arm64", before the
 ; edition's). The same app either way: one installs over the other.
@@ -56,7 +50,7 @@ DefaultDirName={autopf}\BaoCode
 DefaultGroupName=BaoCode
 UninstallDisplayName=BaoCode
 UninstallDisplayIcon={app}\baocode.exe
-OutputBaseFilename=BaoCode-{#VersionNumber}-setup{#ArchSuffix}{#Edition}
+OutputBaseFilename=BaoCode-{#VersionNumber}-setup{#ArchSuffix}
 OutputDir={#OutDir}
 ; What Explorer shows for the installer itself. Windows wants four numbers,
 ; where pubspec's version has three.
@@ -78,8 +72,8 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ; not grant (no admin; UAC set to elevate signed programs only, and Setup is
 ; not signed) or show behind other windows. For all users (Program Files,
 ; elevated) is the dialog's other choice; an update keeps the install mode
-; there is (UsePreviousPrivileges, and lib/update/installer_io.dart passes
-; it).
+; there is (UsePreviousPrivileges). The app no longer updates itself
+; (docs/egress-policy.md): a new version is this installer, run by hand.
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 DisableProgramGroupPage=yes
@@ -215,10 +209,7 @@ Root: HKA; Subkey: "Software\Classes\Directory\Background\shell\BaoCodeFastIde\c
   ValueType: string; ValueName: ""; \
   ValueData: """{app}\baocode.exe"" --baocode-cli ""%V"" -n ""%V"""; \
   Tasks: contextmenu
-; The baocode: URL scheme, always: a site's one-click import of an upstream
-; (baocode.dev/import opens baocode://provider/import?…; see
-; docs/upstream-import.md), the channel build's setup (baocode.dev/activate
-; opens baocode://activate?…), and a file to open in the IDE at a line, as
+; The baocode: URL scheme, always: a file to open in the IDE at a line, as
 ; VS Code's vscode://file/… (baocode://file/C:/…:12:5, see FileLink in
 ; lib/window/code_args.dart). The link comes after --baocode-link, which the
 ; runner hands Flutter as a request (windows/runner/open_requests.cpp).
@@ -277,8 +268,8 @@ Root: HKA; Subkey: "Software\Classes\Directory\Background\shell\BaoCodeFastIde";
 [Run]
 Filename: "{app}\baocode.exe"; Description: "{cm:LaunchProgram,BaoCode}"; \
   Flags: nowait postinstall skipifsilent
-; An update the app ran (lib/update/installer_io.dart) is silent, which
-; skips the entry above: /RELAUNCH opens the app again once it is in place,
+; An update run silently (upstream's app ran it so; this one no longer
+; updates itself) skips the entry above: /RELAUNCH opens the app again once it is in place,
 ; as the user who ran it rather than the administrator Setup elevated to.
 Filename: "{app}\baocode.exe"; Flags: nowait runasoriginaluser; \
   Check: RelaunchRequested
@@ -296,10 +287,10 @@ function WaitForSingleObject(hHandle: THandle; dwMilliseconds: DWORD): DWORD;
 function CloseHandle(hObject: THandle): BOOL;
   external 'CloseHandle@kernel32.dll stdcall';
 
-// An update the app runs (lib/update/installer_io.dart) starts Setup as the
-// app quits, with /WAITPID=<the app's process>, so the elevation it asks
-// for comes up in front of the app: it waits here (two minutes at most) for
-// the app to be gone before installing over it. One that does not go is
+// Setup started with /WAITPID=<a process> (upstream's self-update ran it
+// so as the app quit; this app no longer updates itself, the switch is
+// kept for a script that does) waits here, two minutes at most, for that
+// process to be gone before installing over it. One that does not go is
 // closed by CloseApplications=force.
 function InitializeSetup: Boolean;
 var

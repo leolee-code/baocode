@@ -27,8 +27,8 @@ class BrowserBridge extends ChangeNotifier {
   /// The native messaging host's name, as the extension asks for it.
   static const hostName = 'dev.baocode.browser';
 
-  /// The extension's id: the Chrome Web Store's, and the zip's to load
-  /// unpacked (its manifest's key), the same (docs/release.md, 11).
+  /// The extension's id: the one its manifest's key gives it, loaded
+  /// unpacked from the folder the app writes it to (ExtensionFolder).
   static const extensionIds = ['jfjagocghaaheooicmdnhcholmgdkngk'];
 
   /// What BaoCode and the extension say to each other: background.js's

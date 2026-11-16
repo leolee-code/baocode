@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:baocode/diagnostics/app_event_watch.dart';
-import 'package:baocode/diagnostics/diagnostics_bundle.dart';
 import 'package:baocode/platform/error_log.dart';
 import 'package:baocode/platform/event_log.dart';
 import 'package:baocode/update/version.dart';
@@ -63,11 +62,6 @@ void main() {
     expect(previous, isNot(contains('event number 11')));
     expect(File(events.path).lengthSync(), lessThanOrEqualTo(300));
     expect(File(events.previousPath).lengthSync(), lessThanOrEqualTo(300));
-    // Both are uploaded with the diagnostics.
-    expect(listDiagnosticsLogs('${folder.path}/logs').map((log) => log.name), [
-      'events.1.log',
-      'events.log',
-    ]);
   });
 
   test('a run that said how it ended: nothing said of it next time', () {

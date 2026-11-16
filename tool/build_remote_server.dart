@@ -30,14 +30,9 @@
 // ~/.baocode-server/<VERSION>/ there unless it is already. A debug run of
 // the app finds build/remote/.
 //
-// Besides, each build gzipped (baocode-server-<platform>.gz) and
-// servers.json, which says where each is downloaded from and its size and
-// SHA-256. The installers carry VERSION and servers.json only, not the
-// builds (tool/build_macos.dart, tool/build_windows.dart): the app
-// downloads the one a host needs the first time, checks it against
-// servers.json, and keeps it (lib/remote/remote_binaries.dart). The .gz
-// files are uploaded to where servers.json says.
-import 'dart:convert';
+// The installers carry VERSION and the builds (tool/build_macos.dart,
+// tool/build_windows.dart, tool/package_linux_deb.sh): nothing is
+// downloaded for a host.
 import 'dart:ffi' show Abi;
 import 'dart:io';
 
@@ -52,9 +47,6 @@ const _platforms = [
   'windows-x64',
   'windows-arm64',
 ];
-
-/// Where the gzipped builds are downloaded from: `<base>/<VERSION>/<file>`.
-const _downloadsBase = 'https://dl.baocode.dev/releases/remote';
 
 Future<void> main(List<String> arguments) async {
   final root = File.fromUri(Platform.script).parent.parent.absolute;
@@ -158,27 +150,6 @@ Future<void> main(List<String> arguments) async {
   final name = '${version.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '.')}-$hash';
   File('${out.path}/VERSION').writeAsStringSync('$name\n');
 
-  _step('Compressing the builds for download');
-  final files = <String, Object?>{};
-  for (final platform in _platforms) {
-    final file = 'baocode-server-$platform.gz';
-    File('${out.path}/$file').deleteIfExists();
-    if (!built.contains(platform)) continue;
-    final bytes = GZipCodec(level: 9)
-        .encode(File('${out.path}/baocode-server-$platform').readAsBytesSync());
-    File('${out.path}/$file').writeAsBytesSync(bytes);
-    files[platform] = {
-      'url': '$_downloadsBase/$name/$file',
-      'size': bytes.length,
-      'sha256': '${sha256.convert(bytes)}',
-    };
-    stdout.writeln(
-      '  $file (${(bytes.length / 1048576).toStringAsFixed(1)} MB)',
-    );
-  }
-  File('${out.path}/servers.json').writeAsStringSync(
-    '${const JsonEncoder.withIndent('  ').convert({'version': name, 'files': files})}\n',
-  );
   _step('Done: ${out.path} ($name)');
 }
 

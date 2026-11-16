@@ -14,7 +14,7 @@ Issues and pull requests are both welcome.
 - Match the code around your change: its naming, comment density and idiom.
   UI uses BaoCode's own components, not stock Material or Cupertino widgets.
 - Run `dart format` and `flutter analyze`, and the tests for what you changed,
-  for example `flutter test test/update`. The full suite is slow; you do not
+  for example `flutter test test/policy`. The full suite is slow; you do not
   need to run all of it.
 - Add or update tests for what you fixed or added.
 - Commit messages follow `type(scope): summary`, for example
@@ -36,7 +36,7 @@ Issues and pull requests are both welcome.
 - 跟周围代码保持一致：命名、注释密度、写法。界面用 BaoCode 自己的组件，
   不用 Flutter 自带的 Material / Cupertino 控件。
 - 运行 `dart format`、`flutter analyze`，以及与改动相关的测试，例如
-  `flutter test test/update`。完整测试很慢，不需要全部跑。
+  `flutter test test/policy`。完整测试很慢，不需要全部跑。
 - 修复或新增的功能要补上或更新测试。
 - 提交信息格式为 `type(scope): summary`，例如 `fix(ide): ...`，可参考 `git log`。
 - 每一行你都理解、能解释，包括用 AI 工具写的部分。

@@ -25,8 +25,6 @@ const BRIDGE = 1;
 // What BaoCode may ask of this version, beyond BRIDGE 1's first methods
 // (tabs.*, cdp, detach, watch): told in the hello.
 const CAPABILITIES = ['cdp.session', 'call', 'subscribe', 'configure'];
-// What the toolbar button opens while BaoCode is not there to connect to.
-const HELP = 'https://baocode.dev/download#browser';
 
 let port = null;
 let connected = false; // To BaoCode, not just its host.
@@ -445,7 +443,6 @@ async function share(tab, group) {
 chrome.action.onClicked.addListener(async (tab) => {
   connect();
   if (!(await connection())) {
-    await chrome.tabs.create({ url: HELP, index: tab.index + 1 });
     return;
   }
   if (watching !== null) {

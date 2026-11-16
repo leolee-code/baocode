@@ -9862,6 +9862,21 @@ class AppLocalizationsZh extends AppLocalizations {
       '打不开本地 HTML，也传不了文件。在 chrome://extensions 里点 BaoCode 的「详细信息」，打开「允许访问文件网址」。';
 
   @override
+  String get browserExtensionFolder => '以已解压方式加载';
+
+  @override
+  String get browserExtensionFolderDescription =>
+      '扩展随 BaoCode 一起安装，不需要下载。点「显示文件夹」，然后在 chrome://extensions 打开右上角的「开发者模式」，点「加载已解压的扩展程序」，选中这个文件夹。BaoCode 升级后，再点一次「显示文件夹」，并在扩展页里点该扩展的刷新按钮。';
+
+  @override
+  String get browserExtensionShowFolder => '显示文件夹';
+
+  @override
+  String browserExtensionFolderFailed(String error) {
+    return '无法写出扩展文件夹：$error';
+  }
+
+  @override
   String get browserSettingsInstall => '安装扩展';
 
   @override
@@ -9956,7 +9971,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get browserWelcomeInstall =>
-      'Chrome、Edge、Brave、Arc 都能用。装好后会自动连接，这里会变成绿色。';
+      'Chrome、Edge、Brave、Arc 都能用。点「显示文件夹」，在 chrome://extensions 打开「开发者模式」，点「加载已解压的扩展程序」选中它。装好后会自动连接，这里会变成绿色。';
 
   @override
   String get browserWelcomeTurnedOff => '浏览器功能已在 设置 → 浏览器 中关闭。';
@@ -9967,7 +9982,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get browserWelcomeTry => '试试对 agent 说：「打开 baocode.dev 看看下载页」。';
+  String get browserWelcomeTry => '试试对 agent 说：「打开 example.com 看看页面内容」。';
 
   @override
   String get browserWelcomeUnpacked => '开发者模式 zip';

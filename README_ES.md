@@ -4,7 +4,7 @@
 
 Una interfaz de escritorio fácil de usar para [Claude Code](https://github.com/anthropics/claude-code), con un IDE integrado que responde en milisegundos.
 
-[Sitio web](https://baocode.dev) · [Descargar](https://baocode.dev/download) · [Historial de cambios](https://baocode.dev/changelog)
+> **Fork interno.** Esta traducción es la del proyecto original y no está al día: consulta [README.md](README.md) y [docs/egress-policy.md](docs/egress-policy.md).
 
 ![Lo que dicen los usuarios de BaoCode](docs/readme/reviews.png)
 
@@ -64,9 +64,8 @@ dart run tool/build_windows.dart          # BaoCode-<version>-setup.exe (requier
 dart run tool/build_remote_server.dart    # servidor SSH remoto para Linux x64 y arm64
 ```
 
-La suite completa de pruebas es lenta: ejecuta solo las pruebas relacionadas con tus cambios, por ejemplo `flutter test test/update`.
+La suite completa de pruebas es lenta: ejecuta solo las pruebas relacionadas con tus cambios, por ejemplo `flutter test test/policy`.
 
-La CI compila y publica las versiones cuando se envía un tag `v*`. Consulta [docs/release.md](docs/release.md) para las versiones, las firmas y los destinos de publicación. En [docs/](docs) también hay información sobre [actualizaciones automáticas](docs/auto-update.md), [SSH remoto](docs/ssh-remote.md) y [Windows](docs/windows.md). Algunos documentos están en chino.
 
 ## Estructura del repositorio
 

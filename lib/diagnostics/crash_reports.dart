@@ -151,15 +151,6 @@ String reportText(Uint8List bytes) {
   return utf8.decode(bytes, allowMalformed: true);
 }
 
-/// A crash report without what is the same in every report of the
-/// machine, and so would tell one user's reports: macOS'
-/// `crashReporterKey`; Windows' `ReportIdentifier`-like ids are not of
-/// the machine.
-String redactCrashReport(String text) => text.replaceAllMapped(
-  RegExp(r'("crashReporterKey"\s*:\s*")[^"]*"'),
-  (match) => '${match[1]}"',
-);
-
 /// What a report says went wrong, in a line: macOS' exception and signal
 /// (`EXC_BAD_ACCESS (SIGSEGV)`), Windows' event, module, code and offset
 /// (`APPCRASH flutter_windows.dll c0000005 +0x1234`). Null when it says

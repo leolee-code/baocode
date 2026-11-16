@@ -53,10 +53,13 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('Chrome Web Store'), findsOneWidget);
-      expect(find.text('Install Manually (Developer Mode)'), findsOneWidget);
-      expect(find.text('Open Store'), findsOneWidget);
-      expect(find.text('Download Zip'), findsOneWidget);
+      // docs/egress-policy.md: nothing to fetch it from; it is loaded
+      // unpacked from the folder the app writes it to.
+      expect(find.text('Chrome Web Store'), findsNothing);
+      expect(find.text('Open Store'), findsNothing);
+      expect(find.text('Download Zip'), findsNothing);
+      expect(find.text('Load It Unpacked'), findsOneWidget);
+      expect(find.text('Show Folder'), findsOneWidget);
       if (!Platform.isMacOS) return;
 
       // Never connected: it says to get the extension.

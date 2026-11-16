@@ -53,6 +53,9 @@ jobs:
           pub-cache: true
       - run: flutter pub get
       - run: flutter analyze --fatal-infos
+      # docs/egress-policy.md: nothing removed is back, nothing new reaches
+      # the network unreviewed.
+      - run: flutter test test/policy
       # The files changed alone: many older ones are not formatted yet.
       - name: Format the Dart files changed
         if: github.event_name == 'pull_request'
@@ -86,8 +89,6 @@ jobs:
           - { dir: packages/bao_agent }
           - { dir: packages/bao_conpty }
           - { dir: packages/bao_editor }
-          - { dir: packages/bao_iroh }
-          - { dir: packages/bao_link }
           - { dir: packages/bao_markdown }
           - { dir: packages/bao_pty }
           - { dir: packages/bao_xterm }
@@ -99,12 +100,6 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
           pub-cache: true
-      # The tests run bao_iroh's build hook: main's build of it, or Rust to
-      # build it with.
-      - id: iroh
-        uses: ./.github/actions/bao-iroh-prebuilt
-      - if: steps.iroh.outputs.hit != 'true'
-        uses: ./.github/actions/setup-rust
       - run: flutter pub get
       - name: flutter test
         working-directory: ${{ matrix.dir }}

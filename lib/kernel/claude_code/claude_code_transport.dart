@@ -55,7 +55,7 @@ class ClaudeLaunch {
     this.thinking,
     this.autocompact,
     this.autoModeDuringPlan,
-    this.attribution = CommitAttribution.agent,
+    this.attribution = CommitAttribution.none,
     this.persist = true,
     this.env,
     this.settingsPath,
@@ -213,10 +213,6 @@ class ClaudeLaunch {
   );
 
   Map<String, String>? get _attribution => switch (attribution) {
-    CommitAttribution.baocode => const {
-      'commit': CommitAttribution.baoCodeCommit,
-      'pr': CommitAttribution.baoCodePullRequest,
-    },
     CommitAttribution.agent => null,
     CommitAttribution.none => const {'commit': '', 'pr': ''},
   };

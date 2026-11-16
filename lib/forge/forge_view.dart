@@ -16,7 +16,6 @@ class ForgeLogo extends StatelessWidget {
   const ForgeLogo(this.kind, {super.key, this.size = 16, this.color});
 
   static const gitlabAsset = 'assets/branding/gitlab.svg';
-  static const giteeAsset = 'assets/branding/gitee.svg';
 
   final ForgeKind kind;
   final double size;
@@ -40,8 +39,6 @@ class ForgeLogo extends StatelessWidget {
     return switch (kind) {
       ForgeKind.github => Icon(Codicons.github, size: size, color: color),
       ForgeKind.gitlab => svg(gitlabAsset),
-      ForgeKind.gitee => svg(giteeAsset),
-      ForgeKind.gitcode => Icon(Codicons.repo, size: size, color: color),
     };
   }
 }

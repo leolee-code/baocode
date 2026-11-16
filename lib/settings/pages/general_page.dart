@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-import '../../bash_exe/bao_bash.dart';
-import '../../bash_exe/bao_bash_view.dart';
 import '../../ide/explorer_excludes.dart';
 import '../../ide/ide_button.dart';
 import '../../ide/ide_menu.dart';
@@ -50,7 +48,6 @@ class GeneralSettingsPage extends StatelessWidget {
     this.settings,
     this.tips,
     this.claudeStatus,
-    this.bash,
   });
 
   /// settings.json; none under test, where choices are not kept.
@@ -60,16 +57,12 @@ class GeneralSettingsPage extends StatelessWidget {
   /// test and on the web, where the path is not shown.
   final Future<LocalClaudeStatus?> Function()? claudeStatus;
 
-  /// BaoCode Bash, where it is offered (Windows); none under test.
-  final BaoBash? bash;
-
   /// The feature tips: those not on yet are listed first.
   final FeatureTipsController? tips;
 
   static String attributionName(BuildContext context, CommitAttribution value) {
     final l10n = context.l10n;
     return switch (value) {
-      CommitAttribution.baocode => 'BaoCode',
       CommitAttribution.agent => l10n.generalSettingsAttributionAgent,
       CommitAttribution.none => l10n.generalSettingsAttributionNone,
     };
@@ -81,7 +74,6 @@ class GeneralSettingsPage extends StatelessWidget {
   ) {
     final l10n = context.l10n;
     return switch (value) {
-      CommitAttribution.baocode => CommitAttribution.baoCodeCommit,
       CommitAttribution.agent => l10n.generalSettingsAttributionAgentDetail,
       CommitAttribution.none => l10n.generalSettingsAttributionNoneDetail,
     };
@@ -325,12 +317,7 @@ class GeneralSettingsPage extends StatelessWidget {
                   label: l10n.generalSettingsCommitAttribution,
                   description: l10n.generalSettingsCommitAttributionDescription,
                   below: [
-                    SelectableText(
-                      detail,
-                      style: current == CommitAttribution.baocode
-                          ? SettingsText.path
-                          : SettingsText.description,
-                    ),
+                    SelectableText(detail, style: SettingsText.description),
                   ],
                   trailing: SettingsDropdown(
                     current: name,
@@ -447,13 +434,6 @@ class GeneralSettingsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                ],
-              ),
-            if (bash case final bash?)
-              SettingsGroup(
-                title: l10n.generalSettingsCommandLine,
-                children: [
-                  SettingsCard(children: [BaoBashSetting(bash: bash)]),
                 ],
               ),
             SettingsGroup(

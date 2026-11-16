@@ -1,7 +1,6 @@
 // Builds the macOS distribution, one for Apple silicon (arm64) and one for
-// Intel (x64): each a .dmg that ships the app and a .zip the app updates
-// itself from (lib/update/; signed into the release manifest by
-// tool/release_manifest.dart). Flutter builds the app once, universal; each
+// Intel (x64): each a .dmg that ships the app and a .zip the app
+// can be unpacked from. Flutter builds the app once, universal; each
 // is that app thinned to one architecture (ditto --arch), about half its
 // size. Run from anywhere in the repository:
 //
@@ -14,22 +13,11 @@
 //                                                remote server already in
 //                                                build/remote/ (CI builds
 //                                                it once, for both apps)
-//   dart run tool/build_macos.dart --channel      the channel build
-//                                                (BAOCODE_CHANNEL; lib/channel/),
-//                                                its files named -channel
-//   dart run tool/build_macos.dart --remote-release [VERSION]
-//                                                take the remote server
-//                                                published (the newest
-//                                                without VERSION; tool/
-//                                                fetch_remote_server.dart)
-//                                                instead of building one
 //
 // They land in build/installers/: BaoCode-<version>-<arch>.dmg and
-// BaoCode-<version>-mac-<arch>.zip, arch arm64 or x64 (the channel
-// build's ending in -channel: BaoCode-<version>-<arch>-channel.dmg…); beside them,
-// remote/<VERSION>/, the remote server's gzipped builds, which the app
-// downloads instead of carrying them (tool/build_remote_server.dart), to
-// upload with the release.
+// BaoCode-<version>-mac-<arch>.zip, arch arm64 or x64. The app carries the
+// remote server's builds (tool/build_remote_server.dart): nothing is
+// downloaded for a remote host.
 //
 // The Dart code's symbols are saved as it is built, to build/symbols/
 // App.macos.symbols (universal: the App framework's executable before it is
@@ -38,7 +26,7 @@
 // turns into functions with that file. The app ships stripped, as before.
 //
 // Signed with a Developer ID and notarised when the environment says how
-// (docs/release.md has how to get each):
+// (a company's own Apple Developer account; this fork does not sign yet):
 //
 //   BAOCODE_MACOS_SIGN_IDENTITY  the certificate's SHA-1 (40 hex digits, as
 //                                `security find-identity -v -p codesigning`
@@ -50,11 +38,13 @@
 //   BAOCODE_NOTARY_ISSUER        its issuer ID
 //
 // Without an identity the app is signed ad hoc, again: the remote server's
-// files put in it after flutter signed it have to be sealed too, or the
-// signature is broken and the app refuses the update (lib/update/
-// installer_io.dart checks it). Ad hoc, it opens on this machine; Gatekeeper
-// refuses it on anyone else's ("BaoCode is damaged and can't be opened").
-// Signed but not notarised, it is refused too, with another message.
+// builds and the files put in it after flutter signed it have to be sealed
+// too, or the signature is broken. Ad hoc, it opens on this machine;
+// Gatekeeper refuses it on anyone else's ("BaoCode is damaged and can't be
+// opened") until they allow it in System Settings → Privacy & Security.
+// Signed but not notarised, it is refused too, with another message. To
+// notarise, the remote server's two macOS builds in Contents/Resources/
+// remote/ have to be signed first ([_Signing.signApp] does not yet).
 import 'dart:convert';
 import 'dart:io';
 
@@ -81,9 +71,6 @@ const _architectures = {'arm64': 'arm64', 'x86_64': 'x64'};
 /// Where the remote server is built (tool/build_remote_server.dart).
 const _remoteRelative = 'build/remote';
 
-/// Where one published is taken to (tool/fetch_remote_server.dart).
-const _remoteReleaseRelative = 'build/remote-release';
-
 /// The browser's native messaging host, beside the app's executable.
 const _browserHost = 'baocode-browser-host';
 
@@ -98,18 +85,15 @@ const _required = [
   'Contents/Frameworks/App.framework/Resources/flutter_assets',
   // The terminal's native half (bao_pty's hook/build.dart builds it).
   'Contents/Frameworks/bao_pty.framework',
-  // The phones' link: iroh (bao_iroh's hook/build.dart builds it).
-  'Contents/Frameworks/bao_iroh.framework',
   // Finder's context menu (macos/FinderExtension), which Settings → General
   // turns on.
   'Contents/PlugIns/FinderExtension.appex',
   // What Chrome runs for BaoCode's extension (macos/BrowserBridge).
   'Contents/MacOS/$_browserHost',
   // The server remote projects run on their host (Linux and macOS, x64 and
-  // arm64; tool/build_remote_server.dart): which build, and where it is
-  // downloaded from.
+  // arm64; tool/build_remote_server.dart): which build; the builds
+  // themselves are beside it.
   'Contents/Resources/remote/VERSION',
-  'Contents/Resources/remote/servers.json',
 ];
 
 Future<void> main(List<String> arguments) async {
@@ -124,36 +108,22 @@ Future<void> main(List<String> arguments) async {
   if (skipBuild && buildOnly) {
     _fail('--skip-build and --build-only leave nothing to do.');
   }
-  final channel = arguments.contains('--channel');
-  final edition = channel ? '-channel' : '';
-  final releaseAt = arguments.indexOf('--remote-release');
-  final remoteRelease = releaseAt < 0
-      ? null
-      : releaseAt + 1 < arguments.length &&
-            !arguments[releaseAt + 1].startsWith('--')
-      ? arguments[releaseAt + 1]
-      : 'latest';
-  final remoteBuilt =
-      skipBuild ||
-      remoteRelease != null ||
-      arguments.contains('--remote-built');
+  const edition = '';
+  final remoteBuilt = skipBuild || arguments.contains('--remote-built');
 
   // The script lives in tool/, so the repository is one level above it.
   final root = File.fromUri(Platform.script).parent.parent.absolute;
   final bundle = Directory('${root.path}/$_bundleRelative');
   final installers = Directory('${root.path}/$_installersRelative');
-  final remote = Directory(
-    '${root.path}/${remoteRelease == null ? _remoteRelative : _remoteReleaseRelative}',
-  );
+  final remote = Directory('${root.path}/$_remoteRelative');
   final version = _readVersion(File('${root.path}/pubspec.yaml'));
 
   if (!skipBuild) {
-    _step('Building the Release app${channel ? ' (the channel build)' : ''}');
+    _step('Building the Release app');
     await _run('flutter', [
       'build',
       'macos',
       '--release',
-      if (channel) '--dart-define=BAOCODE_CHANNEL=true',
       // Its symbols kept, to be saved before it is stripped below.
       '--extra-gen-snapshot-options=--no-strip',
     ], root.path);
@@ -171,16 +141,7 @@ Future<void> main(List<String> arguments) async {
   } else {
     _step('Using the app already built');
   }
-  if (remoteRelease != null) {
-    _step('Taking the remote server published');
-    await _run(Platform.resolvedExecutable, [
-      'run',
-      'tool/fetch_remote_server.dart',
-      remoteRelease,
-      '--out',
-      remote.path,
-    ], root.path);
-  } else if (!remoteBuilt) {
+  if (!remoteBuilt) {
     _step('Building the remote server');
     await _run(Platform.resolvedExecutable, [
       'run',
@@ -191,12 +152,9 @@ Future<void> main(List<String> arguments) async {
   }
 
   // Into the .app before it is signed: its files are resources, sealed
-  // with the rest. Not the builds themselves, which the app downloads.
-  _step('Putting the remote server\'s download list in the app');
-  final remoteVersion = _bundleRemote(
-    remote,
-    Directory('${bundle.path}/Contents/Resources/remote'),
-  );
+  // with the rest.
+  _step('Putting the remote server\'s builds in the app');
+  _bundleRemote(remote, Directory('${bundle.path}/Contents/Resources/remote'));
 
   _step('Checking the app');
   _checkBundle(bundle, _required);
@@ -293,54 +251,11 @@ Future<void> main(List<String> arguments) async {
   }
   final made = [for (final files in await Future.wait(finishing)) ...files];
 
-  // None when published already (--remote-release).
-  final downloads = Directory('${installers.path}/remote/$remoteVersion');
-  final builds = [
-    for (final file in remote.listSync())
-      if (file is File && file.path.endsWith('.gz')) file,
-  ];
-  if (builds.isNotEmpty) {
-    _step('Putting the remote server\'s builds beside them');
-    downloads.createSync(recursive: true);
-  }
-  final servers = [
-    for (final file in builds)
-      file.copySync('${downloads.path}/${file.uri.pathSegments.last}'),
-  ];
-
   _step('Done');
-  for (final file in [...made, ...servers]) {
+  for (final file in made) {
     final mb = (file.lengthSync() / (1024 * 1024)).toStringAsFixed(1);
     stdout.writeln('  ${file.path}  ($mb MB)');
   }
-  final base = '${installers.path}/BaoCode-${version.marketing}';
-  stdout.writeln();
-  if (servers.isEmpty) {
-    stdout
-      ..writeln('The app downloads the remote server published:')
-      ..writeln('  https://dl.baocode.dev/releases/remote/$remoteVersion/');
-  } else {
-    stdout
-      ..writeln('Upload the remote server\'s builds, which the app downloads')
-      ..writeln('(or publish them with a server-* tag and package with')
-      ..writeln('--remote-release):')
-      ..writeln(
-        '  ${downloads.path}/*  ->  '
-        'https://dl.baocode.dev/releases/remote/$remoteVersion/',
-      );
-  }
-  stdout
-    ..writeln()
-    ..writeln('To publish it as an update, sign the zips into the manifest:')
-    ..writeln('  dart run tool/release_manifest.dart \\')
-    ..writeln(
-      '    --macos-arm64$edition $base-mac-arm64$edition.zip '
-      '--dmg-arm64$edition $base-arm64$edition.dmg \\',
-    )
-    ..writeln(
-      '    --macos-x64$edition $base-mac-x64$edition.zip '
-      '--dmg-x64$edition $base-x64$edition.dmg',
-    );
 }
 
 /// Notarises [dmg] (and so the [arch] app in it) where [signing] says to,
@@ -427,13 +342,9 @@ class _Signing {
   ///
   /// And the app takes macos/Runner/Release.entitlements, not none: those
   /// turn the sandbox off, which this app needs (it runs the Claude Code
-  /// CLI as a child process and reads its sessions under ~/.claude, and
-  /// replaces itself to update). Signed without them it would fail at
-  /// runtime, not here. Not DebugProfile's either: allow-jit and
-  /// network.server are for debugging.
-  ///
-  /// Once released signed, an update has to be signed by the same team:
-  /// the app checks (lib/update/installer_io.dart).
+  /// CLI as a child process and reads its sessions under ~/.claude).
+  /// Signed without them it would fail at runtime, not here. Not
+  /// DebugProfile's either: allow-jit and network.server are for debugging.
   Future<void> signApp(Directory app) async {
     final frameworks = Directory('${app.path}/Contents/Frameworks');
     for (final entry in frameworks.listSync()) {
@@ -536,11 +447,17 @@ class _Signing {
   }
 }
 
-/// Puts [remote]'s VERSION and servers.json (tool/build_remote_server.dart)
-/// in [target], and nothing else: the builds an older run put there go.
-/// Answers the VERSION.
+/// Puts [remote]'s VERSION and builds (tool/build_remote_server.dart) in
+/// [target], and nothing else. Answers the VERSION.
 String _bundleRemote(Directory remote, Directory target) {
-  if (!File('${remote.path}/servers.json').existsSync()) {
+  final builds = [
+    for (final file in remote.listSync())
+      if (file is File &&
+          RegExp(r'^baocode-server-[a-z0-9-]+$')
+              .hasMatch(file.uri.pathSegments.last))
+        file,
+  ];
+  if (!File('${remote.path}/VERSION').existsSync() || builds.isEmpty) {
     _fail(
       'No remote server built in ${remote.path}.\n'
       'Build it first, without --skip-build '
@@ -549,8 +466,8 @@ String _bundleRemote(Directory remote, Directory target) {
   }
   if (target.existsSync()) target.deleteSync(recursive: true);
   target.createSync(recursive: true);
-  for (final name in ['VERSION', 'servers.json']) {
-    File('${remote.path}/$name').copySync('${target.path}/$name');
+  for (final file in [File('${remote.path}/VERSION'), ...builds]) {
+    file.copySync('${target.path}/${file.uri.pathSegments.last}');
   }
   return File('${remote.path}/VERSION').readAsStringSync().trim();
 }

@@ -46,7 +46,6 @@ String localizedCommandLabel(AppLocalizations l10n, String id, String english) {
     'workbench.action.closeFolder' => l10n.cmdCloseFolder,
     installShellCommandId => l10n.cmdInstallShellCommand(ShellCommand.name),
     uninstallShellCommandId => l10n.cmdUninstallShellCommand(ShellCommand.name),
-    checkForUpdatesCommandId => l10n.cmdCheckForUpdates,
     showSetupGuideCommandId => l10n.cmdShowSetupGuide,
     resetFeatureTipsCommandId => l10n.cmdResetFeatureTips,
     starOnGitHubCommandId => l10n.cmdStarOnGitHub,

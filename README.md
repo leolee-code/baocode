@@ -5,7 +5,7 @@
 
 An awesome, easy-to-use desktop UI for [Claude Code](https://github.com/anthropics/claude-code), with a millisecond-fast IDE built in.
 
-[Website](https://baocode.dev) · [Download](https://baocode.dev/download) · [Changelog](https://baocode.dev/changelog)
+> **This is a company fork.** Everything that reaches the publisher's services (usage statistics, self-update, diagnostics upload, the channel build, featured upstreams) and everything that relays content through a third party (the phone link, push notifications, bots) is removed; commits are not credited by default. The rules, and what still reaches the network, are in [docs/egress-policy.md](docs/egress-policy.md). Build it yourself; there are no releases to download.
 
 ![What users say about BaoCode](docs/readme/reviews.png)
 
@@ -26,9 +26,8 @@ BaoCode has no agent of its own, by design. Claude Code is the agent, and its ec
 - **Your VS Code themes.** The editor, the conversation and the sidebar all follow them.
 - **Skills, MCP servers and more.** Plugins, MCP servers, skills, subagents, rules, commands and hooks in one place, for you or for a single project.
 - **Any model.** Add an upstream that speaks Anthropic's API, OpenAI's Chat Completions or OpenAI's Responses; a local proxy translates between it and Claude Code. Keys stay in the system keychain.
-- **Remote projects over SSH.** The window stays on your machine; files, Git, search, terminals, language servers and Claude Code run on the remote host (Linux, x64 or arm64).
+- **Remote projects over SSH.** The window stays on your machine; files, Git, search, terminals, language servers and Claude Code run on the remote host: those whose server the build carries (see [docs/ssh-remote.md](docs/ssh-remote.md) 9).
 - **Notifications.** A system notification, a sound and a badge when an agent needs you or finishes. Close the window and the agents keep running in the menu bar or tray.
-- **Updates itself** in the background, or manually, or not at all.
 
 ## Speed
 
@@ -61,12 +60,12 @@ To build what is released, into `build/installers/`:
 dart run tool/build_macos.dart            # BaoCode-<version>-{arm64,x64}.dmg and BaoCode-<version>-mac-{arm64,x64}.zip
 dart run tool/build_windows.dart          # BaoCode-<version>-setup.exe (needs Inno Setup)
 flutter build linux --release && sh tool/package_linux_deb.sh   # BaoCode-<version>-linux-{amd64,arm64}.deb and .tar.gz, on Ubuntu
-dart run tool/build_remote_server.dart    # the SSH remote server, for Linux x64 and arm64
+dart run tool/build_remote_server.dart    # the SSH remote server, carried by the installers
 ```
 
-The full test suite is slow; run the tests for what you changed, for example `flutter test test/update`.
+The full test suite is slow; run the tests for what you changed, for example `flutter test test/policy`.
 
-Releases are built and published by CI when a `v*` tag is pushed; versions, signing and where releases go are in [docs/release.md](docs/release.md). More in [docs/](docs): [auto-update](docs/auto-update.md), [SSH remote](docs/ssh-remote.md), [Windows](docs/windows.md) (some are in Chinese).
+The installers are not signed (macOS asks to allow the app once in System Settings → Privacy & Security). More in [docs/](docs): [egress policy](docs/egress-policy.md), [SSH remote](docs/ssh-remote.md), [Windows](docs/windows.md) (some are in Chinese).
 
 ## Repository
 
@@ -78,8 +77,8 @@ Releases are built and published by CI when a `v*` tag is pushed; versions, sign
 | [packages/bao_pty](packages/bao_pty) | Pseudo terminals for Dart: forkpty on macOS and Linux, ConPTY on Windows |
 | [packages/bao_remote](packages/bao_remote) | The remote host served over SSH |
 | [macos/](macos), [windows/](windows), [linux/](linux) | The native runners |
-| [tool/](tool) | Build, packaging and release scripts |
-| [site/](site) | The website, [baocode.dev](https://baocode.dev) |
+| [tool/](tool) | Build and packaging scripts |
+| [site/](site) | Upstream's website, not part of the app |
 | [docs/](docs) | Design notes |
 
 ## Feedback

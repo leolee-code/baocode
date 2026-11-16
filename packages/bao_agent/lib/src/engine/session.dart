@@ -623,14 +623,13 @@ class AgentSession {
   bool get planExists => File(planFilePath).existsSync();
 
   /// The trailer commits end with and the line pull requests end with:
-  /// the settings', else the agent's own; empty for none.
+  /// the settings', else the agent's own; empty for none. The app asks
+  /// for none unless `chat.commitAttribution` says otherwise.
   ({String commit, String pr}) get attribution {
     final set = settings.attribution;
     return (
       commit: set.commit ?? 'Co-Authored-By: Claude <noreply@anthropic.com>',
-      pr:
-          set.pr ??
-          '🤖 Generated with [${options.productName}](https://baocode.dev)',
+      pr: set.pr ?? '🤖 Generated with ${options.productName}',
     );
   }
 

@@ -103,11 +103,9 @@ class CodeArgs {
   /// hands it over as a request ([agentRequestMarker]).
   static const windowsAgentFlag = '--baocode-agent';
 
-  /// The marker of a `baocode://` link, the link next: a site's one-click
-  /// import of an upstream (`baocode://provider/import?…`, see
-  /// UpstreamImport), asked about in the main window, which comes in front
-  /// for it; the channel build's setup (`baocode://activate?…`); a file to
-  /// open in the IDE (`baocode://file/…`, see [FileLink]).
+  /// The marker of a `baocode://` link, the link next: a file to open in
+  /// the IDE (`baocode://file/…`, see [FileLink]). No link adds an upstream
+  /// or sets the app up (docs/egress-policy.md).
   static const importRequestMarker = '\u0000import';
 
   /// The flag Windows starts the app with for a `baocode://` link (the URL

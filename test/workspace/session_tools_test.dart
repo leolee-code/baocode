@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:baocode/bots/bot_tools.dart';
 import 'package:baocode/chat/chat_models.dart';
 import 'package:baocode/chat/chat_session.dart';
 import 'package:baocode/kernel/agent_kernel.dart';
@@ -98,7 +97,10 @@ void main() {
     'only with the setting on, and not to the app\'s own agents (#934)',
     () async {
       expect(await offered(app), containsAll(SessionTools.names));
-      workspace.appFolderRoot = p.join(app, 'bots');
+      final own = p.join(app, 'bots', 'mia');
+      workspace.agentSetup = (path) => path == own
+          ? AgentSetup(workspace: () => const KernelWorkspace(folders: []))
+          : null;
       expect(
         await offered(p.join(app, 'bots', 'mia')),
         isNot(contains('session_list')),
@@ -118,11 +120,11 @@ void main() {
     tests.session.send(const ComposerMessage(text: 'run the tests'));
     await settle(tests);
     final leadId = lead.id!;
-    final testsId = BotTools.idOf(tests);
+    final testsId = SessionTools.idOf(tests);
 
     final listed = await call('session_list', {}, from: leadId);
     expect(listed, contains('$testsId | app | Tests | idle'));
-    expect(listed, isNot(contains(BotTools.idOf(lead))));
+    expect(listed, isNot(contains(SessionTools.idOf(lead))));
 
     final started = launches.length;
     final read = await call('session_read', {'session': testsId}, from: leadId);
@@ -153,7 +155,7 @@ void main() {
     );
     expect(
       await call('session_send', {
-        'session': BotTools.idOf(lead),
+        'session': SessionTools.idOf(lead),
         'text': 'x',
       }, from: leadId),
       endsWith('That is this conversation.'),

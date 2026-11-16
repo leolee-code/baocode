@@ -2229,14 +2229,9 @@ class _ChatHistoryViewState extends State<ChatHistoryView>
       _unfoldedTurns.clear();
     });
     if (feed is ChatSession) {
-      feed.editMessage(
-        index,
-        message,
-        from: UserPlace.computer,
-        revertFiles: revertFiles,
-      );
+      feed.editMessage(index, message, revertFiles: revertFiles);
     } else {
-      feed.editMessage(index, message, from: UserPlace.computer);
+      feed.editMessage(index, message);
     }
   }
 

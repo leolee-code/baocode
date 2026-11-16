@@ -2,26 +2,18 @@
 # Packages flutter build linux --release into a .deb and a portable tarball,
 # for this machine's processor (x64 or arm64). Run on Ubuntu after the
 # bundle exists at build/linux/<arch>/release/bundle. The remote server's
-# VERSION and servers.json, when built into build/remote/, go beside the
-# executable (lib/remote/remote_binaries.dart); the app downloads the
-# builds they name.
+# VERSION and builds, when built into build/remote/, go beside the
+# executable (lib/remote/remote_binaries.dart): nothing is downloaded.
 #
 #   sh tool/package_linux_deb.sh            the standard build
-#   sh tool/package_linux_deb.sh --channel  the channel build (built with
-#                                           BAOCODE_CHANNEL=true in the
-#                                           environment and as a dart-define):
-#                                           its files end in -channel, and it
-#                                           depends on WebKitGTK, for its
-#                                           login window
 set -eu
 
 edition=
 webkit=
-case "${1:-}" in
-  --channel) edition=-channel; webkit=", libwebkit2gtk-4.1-0" ;;
-  "") ;;
-  *) echo "Unknown argument: $1" >&2; exit 1 ;;
-esac
+if [ -n "${1:-}" ]; then
+  echo "Unknown argument: $1" >&2
+  exit 1
+fi
 
 root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 version=$(sed -n 's/^version:[[:space:]]*//p' "$root/pubspec.yaml")
@@ -38,10 +30,14 @@ if [ ! -x "$bundle/baocode" ]; then
   exit 1
 fi
 
-if [ -f "$root/build/remote/servers.json" ]; then
+if [ -f "$root/build/remote/VERSION" ]; then
   rm -rf "$bundle/remote"
   mkdir -p "$bundle/remote"
-  cp "$root/build/remote/VERSION" "$root/build/remote/servers.json" "$bundle/remote/"
+  cp "$root/build/remote/VERSION" "$bundle/remote/"
+  for build in "$root"/build/remote/baocode-server-*; do
+    case "$build" in *.gz) continue ;; esac
+    cp "$build" "$bundle/remote/"
+  done
 fi
 
 stage=$(mktemp -d)
@@ -94,8 +90,7 @@ Section: devel
 Priority: optional
 Architecture: ${package_arch}
 Depends: libc6 (>= ${glibc}), libgtk-3-0, libblkid1, liblzma5${webkit}
-Maintainer: BaoCode <noreply@baocode.dev>
-Homepage: https://baocode.dev
+Maintainer: BaoCode <noreply@localhost>
 Description: BaoCode desktop for Linux
  A desktop UI for Claude Code, with a fast IDE built in.
 EOF

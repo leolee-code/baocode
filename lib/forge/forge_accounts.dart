@@ -252,8 +252,6 @@ class ForgeAccounts extends ChangeNotifier {
       switch (kind) {
         ForgeKind.github => githubClient.isNotEmpty,
         ForgeKind.gitlab => gitlabClient.isNotEmpty,
-        // No device flow: a token only.
-        ForgeKind.gitee || ForgeKind.gitcode => false,
       };
 
   static String _secretId(String host) => 'forge.$host';
@@ -283,18 +281,6 @@ class ForgeAccounts extends ChangeNotifier {
       token: token,
     ),
     ForgeKind.gitlab => GitLabApi(
-      host: host,
-      scheme: scheme,
-      http: http,
-      token: token,
-    ),
-    ForgeKind.gitee => GiteeApi(
-      host: host,
-      scheme: scheme,
-      http: http,
-      token: token,
-    ),
-    ForgeKind.gitcode => GitCodeApi(
       host: host,
       scheme: scheme,
       http: http,
@@ -443,31 +429,22 @@ class ForgeAccounts extends ChangeNotifier {
   /// Starts signing in to [kind]'s public service from the browser: the
   /// code the user enters there. Throws [ForgeException].
   Future<ForgeDeviceCode> startDeviceFlow(ForgeKind kind) async {
-    if (kind == ForgeKind.gitee || kind == ForgeKind.gitcode) {
-      throw ForgeException('${kind.label} signs in with a token only.');
-    }
     final host = kind.publicHost;
     final response = await http.send(
       'POST',
       switch (kind) {
         ForgeKind.github => Uri.https(host, '/login/device/code'),
-        ForgeKind.gitlab ||
-        ForgeKind.gitee ||
-        ForgeKind.gitcode => Uri.https(host, '/oauth/authorize_device'),
+        ForgeKind.gitlab => Uri.https(host, '/oauth/authorize_device'),
       },
       headers: const {'Accept': 'application/json'},
       form: {
         'client_id': switch (kind) {
           ForgeKind.github => githubClient,
-          ForgeKind.gitlab ||
-          ForgeKind.gitee ||
-          ForgeKind.gitcode => gitlabClient,
+          ForgeKind.gitlab => gitlabClient,
         },
         'scope': switch (kind) {
           ForgeKind.github => _githubScopes,
-          ForgeKind.gitlab ||
-          ForgeKind.gitee ||
-          ForgeKind.gitcode => _gitlabScopes,
+          ForgeKind.gitlab => _gitlabScopes,
         },
       },
     );
@@ -520,17 +497,13 @@ class ForgeAccounts extends ChangeNotifier {
         'POST',
         switch (code.kind) {
           ForgeKind.github => Uri.https(code.host, '/login/oauth/access_token'),
-          ForgeKind.gitlab ||
-          ForgeKind.gitee ||
-          ForgeKind.gitcode => Uri.https(code.host, '/oauth/token'),
+          ForgeKind.gitlab => Uri.https(code.host, '/oauth/token'),
         },
         headers: const {'Accept': 'application/json'},
         form: {
           'client_id': switch (code.kind) {
             ForgeKind.github => githubClient,
-            ForgeKind.gitlab ||
-            ForgeKind.gitee ||
-            ForgeKind.gitcode => gitlabClient,
+            ForgeKind.gitlab => gitlabClient,
           },
           'device_code': code.deviceCode,
           'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',

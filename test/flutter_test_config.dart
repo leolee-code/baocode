@@ -16,7 +16,6 @@ import 'package:baocode/ide/ide_diff_options.dart';
 import 'package:baocode/ide/lsp/packs/language_packs.dart';
 import 'package:baocode/kernel/claude_code/claude_core_setting.dart';
 import 'package:baocode/kernel/kernel_registry.dart';
-import 'package:baocode/models/featured_upstreams.dart';
 import 'package:baocode/kernel/mock/mock_kernels.dart';
 import 'package:baocode/platform/context_menu.dart';
 import 'package:baocode/platform/shell_command.dart';
@@ -53,9 +52,6 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     ShellCommand.debugInstaller = _NoShellCommand();
     ContextMenu.debugInstaller = _NoContextMenu();
     CustomizeView.mcpProber = null;
-    FeaturedUpstream.loader = () async => const [];
-    FeaturedUpstream.keptLoader = () async => const [];
-    FeaturedUpstream.forget();
     WorkbenchThemeService.instance = WorkbenchThemeService(
       initial: ColorThemeData.fromStorageData(defaultTheme)!..isLoaded = true,
     );

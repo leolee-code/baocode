@@ -26,10 +26,8 @@
 		</dict>
 	</array>
 	<!-- baocode://, by which the Finder extension hands the app what its
-	     context menu is on, a site's one-click import an upstream, and
-	     the channel build's setup page what it was told, and a page or
-	     tool a file to open in the IDE, baocode://file/… (see
-	     AppDelegate.swift). -->
+	     context menu is on, and a page or tool a file to open in the IDE,
+	     baocode://file/… (see AppDelegate.swift). -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -85,11 +83,5 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>BaoCode lets the phones paired with it find it on the local network.</string>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_baocode._tcp</string>
-	</array>
 </dict>
 </plist>

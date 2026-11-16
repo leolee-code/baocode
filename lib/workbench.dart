@@ -17,9 +17,6 @@ import 'browser/browser_tools.dart';
 import 'browser/browser_welcome.dart';
 import 'images/image_tools.dart';
 import 'usage/usage_tools.dart';
-import 'channel/channel_setup.dart';
-import 'channel/channel_gate.dart';
-import 'channel/channel_setup_welcome.dart';
 import 'chat/aside_layers.dart';
 import 'chat/chat_keys.dart';
 import 'chat/chat_models.dart' show FileChange, FileChangeKind;
@@ -70,7 +67,6 @@ import 'ide/ide_commands.dart';
 import 'ide/ide_dialog.dart';
 import 'ide/ide_menu.dart';
 import 'models/model_welcome.dart';
-import 'models/upstream_import.dart';
 import 'ide/ide_modern_ui.dart';
 import 'ide/ide_notifications.dart';
 import 'ide/git/commit_message.dart';
@@ -107,9 +103,6 @@ import 'search/search_palette.dart';
 import 'settings/app_settings.dart';
 import 'settings/data_dir_startup.dart';
 import 'settings/jsonc_file.dart';
-import 'settings/pages/diagnostics_dialog.dart';
-import 'settings/pages/models_page.dart';
-import 'settings/pages/upstream_import_dialog.dart';
 import 'settings/settings_dialog.dart';
 import 'settings/shell_command_actions.dart';
 import 'sidebar/sidebar.dart';
@@ -647,16 +640,7 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
         }
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _afterFirstFrame());
-      _stopUpdateOffers = widget.settings?.updates?.listen(
-        _notifications,
-        () => context.l10n,
-      );
-    } else if (ChannelGate.current case final gate? when !gate.ready) {
-      // Opened before the main window's was done: here as well.
-      WidgetsBinding.instance.addPostFrameCallback((_) => _setUpChannel());
     }
-    // Signed out (Settings → Account, or by the site): the welcome again.
-    ChannelGate.current?.addListener(_channelGateChanged);
     widget.settings?.files?.changes.addListener(_settingsFilesChanged);
     _settingsFilesChanged();
     _sidePanelShown = _sidePanel.isShown;
@@ -800,71 +784,9 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
   Future<void> _afterFirstFrame() async {
     final settings = widget.settings;
     if (settings?.files == null || !mounted) return;
-    await _setUpChannel();
-    if (!mounted) return;
     await offerOldDataDirRemoval(context);
     if (!mounted) return;
     await _startTips();
-  }
-
-  bool _channelWelcomeShown = false;
-
-  void _channelGateChanged() {
-    final gate = ChannelGate.current;
-    if (gate == null || gate.ready || _channelWelcomeShown) return;
-    // Its account read meanwhile: signed in, likely.
-    if (gate.stage == ChannelStage.finding) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _setUpChannel());
-  }
-
-  /// The channel build's way in (lib/channel/): its welcome, which stays
-  /// till it is set up and the user signed in to the channel's account
-  /// site, before anything else; in each window open meanwhile, done in
-  /// any; and again once signed out.
-  Future<void> _setUpChannel() async {
-    final gate = ChannelGate.current;
-    if (gate == null || _channelWelcomeShown || !mounted) return;
-    _channelWelcomeShown = true;
-    try {
-      if (gate.stage != ChannelStage.setup && gate.channel == null) {
-        final language = Localizations.localeOf(context).languageCode;
-        await gate.find(language == 'zh' ? 'zh' : 'en');
-      }
-      if (gate.ready || !mounted) return;
-      final diagnostics = widget.settings?.diagnostics;
-      await showChannelSetupWelcome(
-        context,
-        gate: gate,
-        trouble: diagnostics == null
-            ? null
-            : (context) =>
-                  unawaited(showDiagnosticsDialog(context, diagnostics)),
-      );
-    } finally {
-      _channelWelcomeShown = false;
-    }
-  }
-
-  /// The setup page's `baocode://activate` link, opened: what it says,
-  /// unless it was set up already; one not this install's, said so.
-  Future<void> _acceptChannelLink(String link) async {
-    final setup = ChannelSetup.current;
-    if (setup == null || setup.done) return;
-    _windows?.showChat();
-    final l10n = context.l10n;
-    final message = switch (setup.acceptLink(link)) {
-      ChannelLinkResult.accepted => null,
-      ChannelLinkResult.invalid => l10n.channelSetupLinkInvalid,
-      ChannelLinkResult.otherInstall => l10n.channelSetupLinkOther,
-    };
-    if (message == null) return;
-    await showIdeDialog(
-      context,
-      message: message,
-      buttons: [l10n.commonOk],
-      cancel: null,
-      type: IdeDialogType.error,
-    );
   }
 
   Future<SshPasswordAnswer?> _askSshPassword(
@@ -876,7 +798,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
 
   @override
   void dispose() {
-    ChannelGate.current?.removeListener(_channelGateChanged);
     for (final edits in _ideAgentEdits.values) {
       edits.dispose();
     }
@@ -910,7 +831,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
     _sessionScan?.cancel();
     _attention?.dispose();
     _starPrompt?.dispose();
-    _stopUpdateOffers?.call();
     if (_tipsPresenter case final presenter?) {
       _tips
         ?..detach(presenter)
@@ -1014,7 +934,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
         openKeybindingsCommandId: () =>
             unawaited(openSettings(SettingsSection.keyboard)),
         ideSelectColorThemeCommandId: _selectColorTheme,
-        checkForUpdatesCommandId: _checkForUpdates,
         if (_tipsEnabled) showSetupGuideCommandId: _showSetupGuide,
         if (_tipsEnabled) resetFeatureTipsCommandId: _resetTips,
         starOnGitHubCommandId: _starOnGitHub,
@@ -1037,7 +956,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
       openKeybindingsCommandId: () =>
           unawaited(openSettings(SettingsSection.keyboard)),
       ideSelectColorThemeCommandId: _selectColorTheme,
-      checkForUpdatesCommandId: _checkForUpdates,
       if (_tipsEnabled) showSetupGuideCommandId: _showSetupGuide,
       if (_tipsEnabled) resetFeatureTipsCommandId: _resetTips,
       starOnGitHubCommandId: _starOnGitHub,
@@ -1507,7 +1425,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
       ?action(openSettingsCommandId, Codicons.settingsGear),
       ?action(openKeybindingsCommandId, Codicons.keyboard),
       ?action(ideSelectColorThemeCommandId, Codicons.symbolColor),
-      ?action(checkForUpdatesCommandId, Codicons.cloudDownload),
       ?action(showSetupGuideCommandId, Codicons.rocket),
       ?action(resetFeatureTipsCommandId, Codicons.discard),
       ?action(starOnGitHubCommandId, Codicons.star),
@@ -1600,11 +1517,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
       category: 'Preferences',
       label: commandCatalog[openLspSettingsCommandId]!.title,
       run: () => unawaited(_openLspSettings()),
-    ),
-    IdeCommand(
-      id: checkForUpdatesCommandId,
-      label: commandCatalog[checkForUpdatesCommandId]!.title,
-      run: _checkForUpdates,
     ),
     IdeCommand(
       id: showSetupGuideCommandId,
@@ -1859,29 +1771,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
 
   /// Whether the terminal panel's tip was raised this launch.
   bool _terminalTipRaised = false;
-
-  // --- Updates -------------------------------------------------------------
-
-  /// What the app's updates found by themselves, told of here: the main
-  /// window's.
-  VoidCallback? _stopUpdateOffers;
-
-  /// The sidebar's Update: Restart to Update, as the offer's button.
-  void _restartToUpdate() {
-    if (widget.settings?.updates case final updates?) {
-      unawaited(updates.restart(_notifications, context.l10n));
-    }
-  }
-
-  /// Check for Updates...: what it finds told of in this window.
-  void _checkForUpdates() {
-    final updates = widget.settings?.updates;
-    if (updates == null) {
-      _notifications.notify(IdeSeverity.info, context.l10n.updateUnsupported);
-      return;
-    }
-    unawaited(updates.checkNow(_notifications, context.l10n));
-  }
 
   /// The chords of a sequence typed so far (⌘K of ⌘K ⌘S).
   List<KeyChord>? _pendingChords;
@@ -2294,10 +2183,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
       for (final link in paths.skip(1)) {
         if (FileLink.parse(link) case final args?) {
           await _windows?.handleCode(args);
-        } else if (ChannelSetup.isLink(link)) {
-          await _acceptChannelLink(link);
-        } else {
-          await _importUpstream(link);
         }
       }
       return;
@@ -2490,8 +2375,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
         'more': l10n.menuMore,
         'newWindow': l10n.cmdNewWindow,
         'closeWindow': l10n.menuCloseWindow,
-        // The app menu's, under About.
-        'checkForUpdates': l10n.cmdCheckForUpdates.replaceAll('...', '…'),
       }),
     );
   }
@@ -2721,32 +2604,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
         child: ExcludeFocus(excluding: !shown, child: chat),
       ),
     );
-  }
-
-  /// A site's one-click import of an upstream ([UpstreamImport]): asked
-  /// about in this window, brought in front; once added, its page in
-  /// Settings → Models.
-  Future<void> _importUpstream(String link) async {
-    // The channel build's only upstream is its account's.
-    if (ChannelSetup.channelBuild) return;
-    _windows?.showChat();
-    final l10n = context.l10n;
-    final import = UpstreamImport.parse(link);
-    if (import == null) {
-      await showIdeDialog(
-        context,
-        message: l10n.modelsImportInvalid,
-        detail: l10n.modelsImportInvalidDetail,
-        buttons: [l10n.commonOk],
-        cancel: null,
-        type: IdeDialogType.error,
-      );
-      return;
-    }
-    final id = await showUpstreamImportDialog(context, import);
-    if (id == null || !mounted) return;
-    ModelsSettingsPage.reveal.value = id;
-    await openSettings(SettingsSection.models);
   }
 
   bool _settingsOpen = false;
@@ -3281,8 +3138,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
           ? null
           : () => unawaited(_editSshServer(host: host)),
       onOpenSettings: () => unawaited(openSettings()),
-      updates: widget.settings?.updates?.service,
-      onUpdate: _restartToUpdate,
       onSearch: () => unawaited(_openPalette()),
       setup: switch (_tips) {
         final tips? when _main => FeatureTipsEntry(controller: tips),

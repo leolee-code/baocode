@@ -6,7 +6,7 @@
 
 一个出色、易用的 [Claude Code](https://github.com/anthropics/claude-code) 桌面界面，内置毫秒级响应的快速 IDE。
 
-[官网](https://baocode.dev) · [下载](https://baocode.dev/download) · [更新日志](https://baocode.dev/changelog)
+> **这是公司内部分支。** 连到发布方服务的功能（使用统计、自动更新、诊断上传、渠道版、推荐上游）和让内容经第三方中转的功能（手机连接、推送、机器人）都已删除，提交默认不署名。规则和仍然存在的外联见 [docs/egress-policy.md](docs/egress-policy.md)。请自行构建，没有可下载的发行版。
 
 ![用户对 BaoCode 的评价](docs/readme/reviews-zh.png)
 
@@ -29,9 +29,8 @@ BaoCode 有意不包含自己的智能体。Claude Code 才是智能体，它拥
 - **统一主题。** 编辑器、对话和侧边栏采用一致的主题样式。
 - **技能、MCP 服务器及更多扩展。** 在同一处管理插件、MCP 服务器、技能、子智能体、规则、命令和 hooks，可供个人使用或限定于某个项目。
 - **多种模型。** 可以添加兼容 Anthropic API、OpenAI Chat Completions 或 OpenAI Responses 的供应商，本地代理负责与 Claude Code 之间的协议转换。密钥保存在系统密钥环中。
-- **通过 SSH 使用远程项目。** 窗口留在本机，文件、Git、搜索、终端、语言服务器和 Claude Code 则运行在远程主机上（Linux，x64 或 arm64）。
+- **通过 SSH 使用远程项目。** 窗口留在本机，文件、Git、搜索、终端、语言服务器和 Claude Code 则运行在远程主机上。能连哪些系统的主机，取决于打包时带了哪些平台的服务端（见 [docs/ssh-remote.md](docs/ssh-remote.md) 第 9 节）。
 - **通知。** 智能体需要你的操作或完成任务时，会通过系统通知、声音和角标提醒。关闭窗口后，智能体可以继续在菜单栏或系统托盘中运行。
-- **自动更新。** 可选择后台自动更新、手动更新，或关闭更新。
 
 ## 速度
 
@@ -64,12 +63,12 @@ flutter run -d macos        # Windows 使用：flutter run -d windows
 dart run tool/build_macos.dart            # BaoCode-<version>-{arm64,x64}.dmg 和 BaoCode-<version>-mac-{arm64,x64}.zip
 dart run tool/build_windows.dart          # BaoCode-<version>-setup.exe（需要 Inno Setup）
 flutter build linux --release && sh tool/package_linux_deb.sh   # BaoCode-<version>-linux-{amd64,arm64}.deb 和 .tar.gz，在 Ubuntu 上
-dart run tool/build_remote_server.dart    # 用于 Linux x64 和 arm64 的 SSH 远程服务器
+dart run tool/build_remote_server.dart    # SSH 远程服务端，随安装包携带
 ```
 
-完整测试套件运行较慢，开发时应只运行与修改相关的测试，例如 `flutter test test/update`。
+完整测试套件运行较慢，开发时应只运行与修改相关的测试，例如 `flutter test test/policy`。
 
-推送 `v*` 标签后，CI 会构建并发布发行版本。版本号、签名及发布位置的说明见 [docs/release.md](docs/release.md)。更多文档位于 [docs/](docs)，包括[自动更新](docs/auto-update.md)、[SSH 远程](docs/ssh-remote.md)和 [Windows](docs/windows.md)，其中部分文档为中文。
+安装包没有签名（macOS 上第一次打开要在"系统设置 → 隐私与安全性"里放行一次）。更多文档位于 [docs/](docs)，包括[外联策略](docs/egress-policy.md)、[SSH 远程](docs/ssh-remote.md)和 [Windows](docs/windows.md)。
 
 ## 仓库结构
 
@@ -81,8 +80,8 @@ dart run tool/build_remote_server.dart    # 用于 Linux x64 和 arm64 的 SSH �
 | [packages/bao_pty](packages/bao_pty) | Dart 伪终端支持：macOS、Linux 使用 forkpty，Windows 使用 ConPTY |
 | [packages/bao_remote](packages/bao_remote) | 通过 SSH 提供服务的远程端 |
 | [macos/](macos)、[windows/](windows)、[linux/](linux) | 原生平台启动器 |
-| [tool/](tool) | 构建、打包及发布脚本 |
-| [site/](site) | 官网 [baocode.dev](https://baocode.dev) 的源码 |
+| [tool/](tool) | 构建和打包脚本 |
+| [site/](site) | 上游官网的源码，不属于应用 |
 | [docs/](docs) | 设计文档 |
 
 ## 反馈

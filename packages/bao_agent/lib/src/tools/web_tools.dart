@@ -244,8 +244,7 @@ class WebFetchTool extends Tool {
   Future<Object> _fetch(Uri uri, ToolContext context) async {
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 30)
-      ..userAgent =
-          'Mozilla/5.0 (compatible; BaoCode-Agent/1.0; +https://baocode.dev)'
+      ..userAgent = 'Mozilla/5.0 (compatible; BaoCode-Agent/1.0)'
       ..findProxy = (url) => HttpClient.findProxyFromEnvironment(
         url,
         environment: context.session.environment,

@@ -18,7 +18,6 @@ import '../forge/forge_ref.dart' show ForgeItemKind;
 import '../forge/forge_view.dart' show forgeStateLook;
 import '../icons/project_icon_picker.dart';
 import '../icons/project_icon_view.dart';
-import '../ide/ide_button.dart' show IdeButtonColors;
 import '../ide/ide_commands.dart' show ideUsesMacKeys;
 import '../ide/ide_hover.dart';
 import '../ide/ide_list.dart';
@@ -37,7 +36,6 @@ import '../remote/ssh_host.dart' show SshHost, SshHostState, SshHosts;
 import '../theme/app_theme.dart';
 import '../theme/codicons.dart';
 import '../theme/workbench_theme.dart' show themeColors;
-import '../update/update_service.dart';
 import '../workspace/chat_drag.dart';
 import '../workspace/editor_launcher.dart';
 import '../workspace/islands.dart';
@@ -208,8 +206,6 @@ class Sidebar extends StatefulWidget {
     this.current,
     this.onSelect,
     this.onNewAgent,
-    this.updates,
-    this.onUpdate,
     this.setup,
     this.surface,
     this.atRight = false,
@@ -228,12 +224,6 @@ class Sidebar extends StatefulWidget {
   final Widget? setup;
 
   final Workspace workspace;
-
-  /// The app's updates: while one waits to be installed
-  /// ([UpdateService.pending]), an Update button beside the gear, which
-  /// runs [onUpdate] (Restart to Update).
-  final UpdateService? updates;
-  final VoidCallback? onUpdate;
 
   /// The agent shown where the sidebar is, selected among the rows: an
   /// agent's window's own; by default the workspace's current one.
@@ -2377,29 +2367,12 @@ class _SidebarState extends State<Sidebar>
     return _workspace.threads.where((t) => t.archived && here(t)).length;
   }
 
-  /// The archived toggle, when there are archived agents, an update's
-  /// button, and the settings' gear.
+  /// The archived toggle, when there are archived agents, and the
+  /// settings' gear.
   Widget _buildFooter() {
-    final updates = widget.updates;
-    final onUpdate = widget.onUpdate;
-    if (updates == null || onUpdate == null) return _buildFooterRow(null);
-    return ListenableBuilder(
-      listenable: updates,
-      builder: (context, _) => _buildFooterRow(
-        updates.pending
-            ? _UpdateButton(updates: updates, onTap: onUpdate)
-            : null,
-      ),
-    );
-  }
-
-  Widget _buildFooterRow(Widget? update) {
     final count = _archivedCount;
     final settings = widget.onOpenSettings;
-    if (count == 0 &&
-        settings == null &&
-        update == null &&
-        widget.setup == null) {
+    if (count == 0 && settings == null && widget.setup == null) {
       return const SizedBox.shrink();
     }
     // No line over it: the list fades out above it instead. Its buttons'
@@ -2414,7 +2387,7 @@ class _SidebarState extends State<Sidebar>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [?widget.setup, _buildFooterButtons(count, settings, update)],
+        children: [?widget.setup, _buildFooterButtons(count, settings)],
       ),
     );
   }
@@ -2422,11 +2395,7 @@ class _SidebarState extends State<Sidebar>
   /// The footer's buttons' row: the archived toggle's height.
   static const _footerRowHeight = 26.0;
 
-  Widget _buildFooterButtons(
-    int count,
-    VoidCallback? settings,
-    Widget? update,
-  ) {
+  Widget _buildFooterButtons(int count, VoidCallback? settings) {
     // As high with the archived toggle as without: the buttons where the
     // conversation's branch is beside it.
     return SizedBox(
@@ -2438,7 +2407,6 @@ class _SidebarState extends State<Sidebar>
                 ? const SizedBox.shrink()
                 : _buildArchivedToggle(count),
           ),
-          if (update != null) ...[const SizedBox(width: 4), update],
           if (settings != null) ...[
             const SizedBox(width: 4),
             SidebarIconButton(
@@ -4266,63 +4234,6 @@ class SidebarIconButton extends StatelessWidget {
                 final icon when spinning => IdeSpinning(icon),
                 final icon => icon,
               },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Update, beside the settings' gear while an update waits: a pill in the
-/// theme's button colors; its hover says which version and what a click
-/// does.
-class _UpdateButton extends StatelessWidget {
-  const _UpdateButton({required this.updates, required this.onTap});
-
-  final UpdateService updates;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final release = updates.release!;
-    final version = release.version.marketing;
-    final message = updates.isMandatory(release)
-        ? l10n.updateMandatory(version)
-        : updates.status == UpdateStatus.ready
-        ? l10n.updateReady(version)
-        : l10n.updateAvailable(version);
-    return IdeHover(
-      message: message,
-      excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
-        label: '${l10n.updateButton}: $message',
-        excludeSemantics: true,
-        onTap: onTap,
-        child: HoverBuilder(
-          cursor: SystemMouseCursors.click,
-          builder: (context, hovered) => GestureDetector(
-            onTap: onTap,
-            child: Container(
-              height: 22,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: hovered
-                    ? IdeButtonColors.hoverBackground
-                    : IdeButtonColors.background,
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Text(
-                l10n.updateButton,
-                style: TextStyle(
-                  color: IdeButtonColors.foreground,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
             ),
           ),
         ),

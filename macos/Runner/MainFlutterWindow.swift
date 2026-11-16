@@ -703,9 +703,6 @@ class MainFlutterWindow: BaoWindow {
     // lib/notifications/).
     attention = Attention(messenger: messenger, window: self)
 
-    // The channel build's login window (see lib/channel/account/).
-    loginWindow = LoginWindowChannel(messenger: messenger)
-
     // Paths the system asks the app to open (see AppDelegate.swift).
     OpenRequests.shared.attach(to: messenger)
 
@@ -779,7 +776,6 @@ class MainFlutterWindow: BaoWindow {
   private var fileMenu: FileMenu?
 
   private var attention: Attention?
-  private var loginWindow: LoginWindowChannel?
 
   /// Kept out of sight while the nib shows it at launch, until the app
   /// has finished launching (see awakeFromNib).
@@ -1148,7 +1144,6 @@ private class FileMenu: NSObject {
     "closeWindow": "Close Window",
     "clearRecent": "Clear Recently Opened",
     "more": "More…",
-    "checkForUpdates": "Check for Updates…",
   ]
   private var recent: [String] = []
 
@@ -1179,21 +1174,11 @@ private class FileMenu: NSObject {
     recentMenu.autoenablesItems = false
   }
 
-  /// The app menu's Check for Updates…, under About (see lib/update/).
-  private let updatesItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-
-  /// Puts the menu after the app menu, before Edit; and Check for
-  /// Updates… in the app menu.
+  /// Puts the menu after the app menu, before Edit.
   func install(in mainMenu: NSMenu) {
     let item = NSMenuItem(title: "File", action: nil, keyEquivalent: "")
     item.submenu = menu
     mainMenu.insertItem(item, at: min(1, mainMenu.numberOfItems))
-    if let appMenu = mainMenu.items.first?.submenu {
-      updatesItem.action = #selector(runCommand(_:))
-      updatesItem.target = self
-      updatesItem.representedObject = "update.checkForUpdate"
-      appMenu.insertItem(updatesItem, at: min(1, appMenu.numberOfItems))
-    }
     build()
   }
 
@@ -1217,7 +1202,6 @@ private class FileMenu: NSObject {
   private func title(_ key: String) -> String { titles[key] ?? key }
 
   private func build() {
-    updatesItem.title = title("checkForUpdates")
     menu.title = title("file")
     menu.supermenu?.items.first(where: { $0.submenu === menu })?.title = title("file")
     menu.removeAllItems()

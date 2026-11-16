@@ -308,8 +308,7 @@ void main() {
     expect(find.byType(GeneralSettingsPage), findsOneWidget);
     // The main window's comes first.
     final dropdown = find.byType(SettingsDropdown).at(1);
-    expect(tester.widget<SettingsDropdown>(dropdown).current, 'BaoCode');
-    expect(find.text(CommitAttribution.baoCodeCommit), findsOneWidget);
+    expect(tester.widget<SettingsDropdown>(dropdown).current, 'None');
 
     Future<void> choose(String label) async {
       await tester.tap(dropdown);
@@ -318,26 +317,26 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    await choose('None');
+    await choose('Follow Agent');
     await settle(
       tester,
-      () => files.settings[CommitAttribution.settingKey] == 'none',
+      () => files.settings[CommitAttribution.settingKey] == 'agent',
     );
     // The page rebuilds a frame after the file is read back.
     await tester.pump();
-    expect(tester.widget<SettingsDropdown>(dropdown).current, 'None');
+    expect(tester.widget<SettingsDropdown>(dropdown).current, 'Follow Agent');
     expect(
       File(files.settings.path).readAsStringSync(),
-      contains('"chat.commitAttribution": "none"'),
+      contains('"chat.commitAttribution": "agent"'),
     );
 
-    await choose('BaoCode');
+    await choose('None');
     await settle(
       tester,
       () => !files.settings.values.containsKey(CommitAttribution.settingKey),
     );
     await tester.pump();
-    expect(tester.widget<SettingsDropdown>(dropdown).current, 'BaoCode');
+    expect(tester.widget<SettingsDropdown>(dropdown).current, 'None');
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('the main window is kept in settings.json, the default '

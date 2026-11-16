@@ -236,10 +236,8 @@ final class OpenRequests {
   /// Open with BaoCode, a new agent with the paths (its marker, then them);
   /// `ide`, Open with Fast Ide, the paths in a new window as `code -n`
   /// opens them (the `code` command's marker, a folder to start from, `-n`,
-  /// then them). A site's (baocode.dev/import): `provider/import`, an
-  /// upstream to add, the link as it came after its marker, which Flutter
-  /// reads (upstream_import.dart); so too baocode.dev/activate's,
-  /// `activate`, the channel build's setup (channel_setup.dart). A page's
+  /// then them). No link adds an upstream or sets the app up
+  /// (docs/egress-policy.md). A page's
   /// or a tool's, as VS Code's `vscode://file/…`: `file`, a file to open in
   /// the IDE at a line, the link after the same marker (FileLink in
   /// code_args.dart). Nil for any other URL, or one without absolute paths.
@@ -248,12 +246,6 @@ final class OpenRequests {
       let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
     else { return nil }
     if components.host?.lowercased() == "file" {
-      return [importMarker, url.absoluteString]
-    }
-    if components.host == "provider" {
-      return components.path == "/import" ? [importMarker, url.absoluteString] : nil
-    }
-    if components.host == "activate" {
       return [importMarker, url.absoluteString]
     }
     let paths = (components.queryItems ?? [])

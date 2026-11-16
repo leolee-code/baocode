@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import '../bots/bot_tools.dart';
 import '../chat/chat_models.dart';
 import '../chat/chat_session.dart';
 import '../kernel/claude_code/claude_sdk_tools.dart';
@@ -21,9 +20,11 @@ abstract final class SessionToolsSetting {
 /// The tools an agent coordinating others has (`mcp__baocode__session_*`),
 /// with [SessionToolsSetting] on: the user's conversations listed, read
 /// (without waking them) and written to (one with no process resumed as
-/// it was, one at work given it in its queue), and waited on. What the
-/// phones' assistant does with its bot_* tools, for a project's agents.
+/// it was, one at work given it in its queue), and waited on.
 abstract final class SessionTools {
+  /// [thread]'s id, as the tools name it.
+  static String idOf(AgentThread thread) => _Threads.idOf(thread);
+
   static const names = [
     'session_list',
     'session_read',
@@ -66,7 +67,7 @@ abstract final class SessionTools {
     AgentThread chat(Map<String, Object?> input, ClaudeSdkCall call) {
       final id = input['session'];
       for (final thread in workspace.threads) {
-        if (BotTools.idOf(thread) != id) continue;
+        if (_Threads.idOf(thread) != id) continue;
         if (_isCaller(thread, call)) {
           throw ArgumentError('That is this conversation.');
         }
@@ -140,11 +141,11 @@ abstract final class SessionTools {
               if ((project == null ||
                       thread.project.name == project ||
                       thread.project.path == project) &&
-                  (status == 'all' || BotTools.statusOf(thread) == status) &&
+                  (status == 'all' || _Threads.statusOf(thread) == status) &&
                   (query == null || thread.title.toLowerCase().contains(query)))
-                '${BotTools.idOf(thread)} | ${thread.project.name} | '
-                    '${thread.title} | ${BotTools.statusOf(thread)} | '
-                    '${BotTools.ago(thread.updatedAt)}',
+                '${_Threads.idOf(thread)} | ${thread.project.name} | '
+                    '${thread.title} | ${_Threads.statusOf(thread)} | '
+                    '${_Threads.ago(thread.updatedAt)}',
           ];
           return lines.isEmpty ? 'None.' : lines.take(limit).join('\n');
         },
@@ -175,14 +176,14 @@ abstract final class SessionTools {
             i >= 0 && lines.length < count;
             i--
           ) {
-            if (BotTools.lineOf(session.itemAt(i)) case final line?) {
+            if (_Threads.lineOf(session.itemAt(i)) case final line?) {
               lines.add(line);
             }
           }
           return [
             '"${thread.title}" in ${thread.project.name} '
-                '(${thread.project.path}): ${BotTools.statusOf(thread)}, '
-                'last moved ${BotTools.ago(thread.updatedAt)}.',
+                '(${thread.project.path}): ${_Threads.statusOf(thread)}, '
+                'last moved ${_Threads.ago(thread.updatedAt)}.',
             if (session.pendingInteraction != null)
               'It waits on the user to answer it (a question, a permission '
                   'or a plan to start): only they can.',
@@ -218,13 +219,13 @@ abstract final class SessionTools {
             return 'Not delivered: it waits on the user to answer it (a '
                 'question, a permission or a plan). Tell the user.';
           }
-          final target = BotTools.idOf(thread);
+          final target = _Threads.idOf(thread);
           final key = (call.sessionId, target);
           final now = DateTime.now();
           if (_sent[key] case (final last, final at)
               when last == text && now.difference(at) < _resendAfter) {
             return 'Not delivered: the same message was sent to it '
-                '${BotTools.ago(at)}.';
+                '${_Threads.ago(at)}.';
           }
           if (!session.canSend) {
             return 'Not delivered: it is at work and takes no message '
@@ -270,18 +271,18 @@ abstract final class SessionTools {
           var cancelled = false;
           unawaited(call.cancelled?.then((_) => cancelled = true));
           while (!cancelled &&
-              BotTools.statusOf(thread) == 'running' &&
+              _Threads.statusOf(thread) == 'running' &&
               DateTime.now().isBefore(until)) {
             await Future<void>.delayed(const Duration(seconds: 1));
           }
-          final status = BotTools.statusOf(thread);
+          final status = _Threads.statusOf(thread);
           String? last;
           if (thread.isOpen) {
             final session = thread.session;
             for (var i = session.itemCount - 1; i >= 0; i--) {
               if (session.itemAt(i) case final AssistantTextItem item
                   when item.text.trim().isNotEmpty) {
-                last = BotTools.lineOf(item);
+                last = _Threads.lineOf(item);
                 break;
               }
             }
@@ -309,4 +310,72 @@ abstract final class SessionTools {
     }
     return null;
   }
+}
+
+/// What the session tools say of a conversation: its id, its state in a
+/// word, and its items a line each.
+abstract final class _Threads {
+  static final _ids = Expando<String>();
+  static final _run = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+  static var _nextId = 0;
+
+  /// [thread]'s id: its session's, or one made for the run while it has
+  /// none (not yet sent to).
+  static String idOf(AgentThread thread) =>
+      _ids[thread] ??= thread.id ?? 'new-$_run-${_nextId++}';
+
+  /// [thread] in a word: waiting, running, failed or idle.
+  static String statusOf(AgentThread thread) => switch (thread.status) {
+    ThreadStatus.needsInput => 'waiting',
+    ThreadStatus.running => 'running',
+    _ when _lastIsError(thread) => 'failed',
+    _ => 'idle',
+  };
+
+  static bool _lastIsError(AgentThread thread) {
+    if (!thread.isOpen) return false;
+    final session = thread.session;
+    for (var i = session.itemCount - 1; i >= 0; i--) {
+      switch (session.itemAt(i)) {
+        case NoticeItem(kind: NoticeKind.error):
+          return true;
+        case UserMessageItem() || AssistantTextItem():
+          return false;
+        default:
+      }
+    }
+    return false;
+  }
+
+  /// How long ago [at] was, in short.
+  static String ago(DateTime at) {
+    final minutes = DateTime.now().difference(at).inMinutes;
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return '${minutes}m ago';
+    if (minutes < 60 * 24) return '${minutes ~/ 60}h ago';
+    return '${minutes ~/ (60 * 24)}d ago';
+  }
+
+  static String _clip(String text, [int max = 600]) {
+    final trimmed = text.trim();
+    return trimmed.length > max ? '${trimmed.substring(0, max)}…' : trimmed;
+  }
+
+  /// [item] in a line or so; null for what is not worth it.
+  static String? lineOf(ChatItem item) => switch (item) {
+    UserMessageItem(:final text, fromAgent: final agent?) =>
+      'Subagent "$agent": ${_clip(text)}',
+    UserMessageItem(:final text) => 'User: ${_clip(text)}',
+    AssistantTextItem(:final text) when text.trim().isNotEmpty =>
+      'Agent: ${_clip(text)}',
+    ToolCallItem(:final kind, :final target) =>
+      '[${kind.name}${target.isEmpty ? '' : ' ${_clip(target, 80)}'}]',
+    TerminalItem(:final command, :final status) =>
+      '[${status.name}: ${_clip(command, 80)}]',
+    PlanItem(:final title) => '[plan${title == null ? '' : ': $title'}]',
+    NoticeItem(kind: NoticeKind.error, :final text) =>
+      '[error: ${_clip(text, 200)}]',
+    AgentItem(:final description) => '[subagent: ${_clip(description, 80)}]',
+    _ => null,
+  };
 }

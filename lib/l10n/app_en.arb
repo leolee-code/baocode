@@ -7449,6 +7449,15 @@
   "browserSettingsAppOld": "The extension is newer than this BaoCode. Update BaoCode.",
   "browserSettingsNoFileAccess": "File access is off",
   "browserSettingsNoFileAccessDescription": "Agents can't open local HTML files or upload files. In chrome://extensions, click Details on BaoCode and turn on Allow access to file URLs.",
+  "browserExtensionFolder": "Load It Unpacked",
+  "browserExtensionFolderDescription": "BaoCode carries the extension; nothing is downloaded. Click Show Folder, then in chrome://extensions turn on Developer mode at the top right, click Load unpacked and choose that folder. After BaoCode updates, click Show Folder again and reload the extension there.",
+  "browserExtensionShowFolder": "Show Folder",
+  "@browserExtensionFolderFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "browserExtensionFolderFailed": "The extension's folder could not be written: {error}",
   "browserSettingsInstall": "Get the Extension",
   "browserSettingsStore": "Chrome Web Store",
   "browserSettingsStoreDescription": "Recommended. Updates automatically; works in Chrome, Edge, Brave, Arc and other Chromium browsers.",
@@ -7479,11 +7488,11 @@
   "browserWelcomeShowTitle": "Show it once",
   "browserWelcomeShow": "Ask an agent to watch, do it yourself in the browser, and it sees each step you took.",
   "browserWelcomeInstallTitle": "Add the extension",
-  "browserWelcomeInstall": "For Chrome, Edge, Brave and Arc. It connects by itself, and this turns green.",
+  "browserWelcomeInstall": "For Chrome, Edge, Brave and Arc. Click Show Folder, turn on Developer mode in chrome://extensions, click Load unpacked and choose it. It connects by itself, and this turns green.",
   "browserWelcomeTurnedOff": "The browser is turned off in Settings → Browser.",
   "browserWelcomeConnected": "{browser} is connected",
   "@browserWelcomeConnected": {"description": "The welcome's step once a browser connected, by its name.", "placeholders": {"browser": {"type": "String"}}},
-  "browserWelcomeTry": "Try telling an agent: “Open baocode.dev and look at the download page.”",
+  "browserWelcomeTry": "Try telling an agent: “Open example.com and tell me what the page says.”",
   "browserWelcomeUnpacked": "Developer Mode Zip",
   "browserWelcomeDone": "Got It",
   "cmdBrowserWelcome": "Connect Your Browser...",

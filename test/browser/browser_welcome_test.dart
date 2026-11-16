@@ -42,8 +42,11 @@ void main() {
     expect(find.text('Watch it work'), findsOneWidget);
     expect(find.text('Show it once'), findsOneWidget);
     expect(find.text('Add the extension'), findsOneWidget);
-    expect(find.text('Open Store'), findsOneWidget);
-    expect(find.text('Developer Mode Zip'), findsOneWidget);
+    // docs/egress-policy.md: nothing to fetch it from; it is loaded
+    // unpacked from the folder the app writes it to.
+    expect(find.text('Open Store'), findsNothing);
+    expect(find.text('Developer Mode Zip'), findsNothing);
+    expect(find.text('Show Folder'), findsOneWidget);
 
     // Browser Settings closes it for the settings' page.
     await tester.tap(find.text('Browser Settings'));

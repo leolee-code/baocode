@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../browser/browser_bridge.dart';
 import '../../browser/browser_tools.dart' show BrowserHistory;
-import '../../browser/extension_store.dart';
+import '../../browser/extension_folder.dart';
 import '../../ide/ide_button.dart';
 import '../../ide/ide_dialog.dart';
 import '../../l10n/l10n.dart';
@@ -50,6 +50,28 @@ class BrowserSettingsPage extends StatelessWidget {
         debugPrint('${BrowserHistory.detailedKey} not kept: $error');
       }),
     );
+  }
+
+  /// Writes the extension this build carries out ([ExtensionFolder]) and
+  /// shows its folder; says so where it cannot be written.
+  static Future<void> showExtensionFolder(BuildContext context) async {
+    final l10n = context.l10n;
+    try {
+      if (ExtensionFolder.canReveal) {
+        await ExtensionFolder.reveal();
+      } else {
+        await ExtensionFolder.prepare();
+      }
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      await showIdeDialog(
+        context,
+        message: l10n.browserExtensionFolderFailed('$error'),
+        buttons: [l10n.commonOk],
+        cancel: null,
+        type: IdeDialogType.error,
+      );
+    }
   }
 
   /// Asks, then deletes the history.
@@ -120,6 +142,22 @@ class BrowserSettingsPage extends StatelessWidget {
             ),
           if (bridge.enabled)
             SettingsGroup(
+              title: l10n.browserSettingsInstall,
+              children: [
+                SettingsRow(
+                  label: l10n.browserExtensionFolder,
+                  description: l10n.browserExtensionFolderDescription,
+                  below: [Text(ExtensionFolder.path, style: SettingsText.path)],
+                  trailing: IdeButton(
+                    label: l10n.browserExtensionShowFolder,
+                    icon: Codicons.folderOpened,
+                    onPressed: () => unawaited(showExtensionFolder(context)),
+                  ),
+                ),
+              ],
+            ),
+          if (bridge.enabled)
+            SettingsGroup(
               title: l10n.browserHistoryTitle,
               description: l10n.browserHistoryDescription,
               children: [
@@ -160,30 +198,6 @@ class BrowserSettingsPage extends StatelessWidget {
               ],
             ),
         ],
-        SettingsGroup(
-          title: l10n.browserSettingsInstall,
-          children: [
-            SettingsRow(
-              label: l10n.browserSettingsStore,
-              description: l10n.browserSettingsStoreDescription,
-              trailing: IdeButton(
-                label: l10n.browserSettingsStoreOpen,
-                icon: Codicons.linkExternal,
-                onPressed: () => unawaited(ExtensionStore.openPage()),
-              ),
-            ),
-            SettingsRow(
-              label: l10n.browserSettingsUnpacked,
-              description: l10n.browserSettingsUnpackedDescription,
-              trailing: IdeButton(
-                label: l10n.browserSettingsUnpackedDownload,
-                icon: Codicons.cloudDownload,
-                secondary: true,
-                onPressed: () => unawaited(ExtensionStore.openZip()),
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }

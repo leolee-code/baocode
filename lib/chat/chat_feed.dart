@@ -23,8 +23,7 @@ abstract interface class ChatFeed implements Listenable {
   ({int index, ComposerDraft draft})? get editing;
   set editing(({int index, ComposerDraft draft})? value);
 
-  /// [from], where the user wrote it ([ChatSession.send]).
-  void editMessage(int index, ComposerMessage message, {UserPlace? from});
+  void editMessage(int index, ComposerMessage message);
 
   /// Moves what the item at [index] runs to the background; null when it
   /// cannot be.
@@ -133,7 +132,7 @@ class SubagentFeed extends ChangeNotifier implements ChatFeed {
   set editing(({int index, ComposerDraft draft})? value) {}
 
   @override
-  void editMessage(int index, ComposerMessage message, {UserPlace? from}) {}
+  void editMessage(int index, ComposerMessage message) {}
 
   @override
   VoidCallback? moveToBackgroundAt(int index) => switch (_items[index]) {

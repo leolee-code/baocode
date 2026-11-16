@@ -9,11 +9,11 @@ import '../ide/ide_button.dart';
 import '../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import '../theme/codicons.dart';
+import '../settings/pages/browser_page.dart' show BrowserSettingsPage;
 import '../theme/workbench_theme.dart' show themeColors;
 import '../tips/welcome_dialog.dart';
 import 'browser_bridge.dart';
 import 'browser_steps.dart' show browserIcon;
-import 'extension_store.dart';
 
 /// What the agents do with the user's browser: once after the update that
 /// brought it (to a user who has not connected one), and from its command
@@ -169,20 +169,16 @@ class _BrowserWelcomeState extends State<BrowserWelcome>
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
+                  // The extension this build carries, loaded unpacked:
+                  // nothing is fetched for it (docs/egress-policy.md).
                   children: bridge.enabled
                       ? [
                           IdeButton(
-                            label: l10n.browserSettingsStoreOpen,
-                            icon: Codicons.linkExternal,
-                            onPressed: () =>
-                                unawaited(ExtensionStore.openPage()),
-                          ),
-                          IdeButton(
-                            label: l10n.browserWelcomeUnpacked,
-                            icon: Codicons.cloudDownload,
-                            secondary: true,
-                            onPressed: () =>
-                                unawaited(ExtensionStore.openZip()),
+                            label: l10n.browserExtensionShowFolder,
+                            icon: Codicons.folderOpened,
+                            onPressed: () => unawaited(
+                              BrowserSettingsPage.showExtensionFolder(context),
+                            ),
                           ),
                         ]
                       : [
