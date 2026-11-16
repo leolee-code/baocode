@@ -906,6 +906,7 @@ final List<KeybindingEntry> defaultKeybindings = List.unmodifiable([
       _editorSequenceEntry(id, bindings.$1, bindings.$2),
   ...editorExtraKeybindings,
   ...windowKeybindings,
+  ...debugKeybindings,
   ...chatExtraKeybindings,
 ]);
 

@@ -14,17 +14,20 @@ import '../../debug/ui/run_and_debug_view.dart';
 import '../../l10n/l10n.dart';
 import '../../platform/data_dir.dart';
 import '../../settings/user_settings.dart';
+import '../debug_terminal.dart';
 import '../ide_debug_host.dart';
 import '../ide_dialog.dart';
 import '../ide_layout.dart';
 import '../ide_workspace.dart';
 import '../lsp_ui/problems_panel.dart' show IdePanelTab;
+import '../terminal/terminal_instance.dart' show TerminalLaunchConfig;
+import '../terminal/terminal_service.dart';
 import '../workbench/contributions.dart';
 import '../workbench/views.dart';
 
 /// Whether Run and Debug is offered: its activity bar item and its
-/// commands. Off until the debugger is ready to ship.
-const debugEntryShown = false;
+/// commands.
+const debugEntryShown = true;
 
 class DebugViewService extends ChangeNotifier {
   /// Over [given] (the window's [IdeWorkbench.debugService]), else one of
@@ -36,10 +39,15 @@ class DebugViewService extends ChangeNotifier {
     required this._layout,
     required this._selection,
     this.settings,
+    this.terminals,
   });
 
   final WorkbenchHost host;
   final UserSettings? settings;
+
+  /// The panel's terminals, for what a debugger runs in one
+  /// (`runInTerminal`); none where they cannot run.
+  final TerminalService? Function()? terminals;
   final DebugService? Function() _given;
   final IdeLayout Function() _layout;
 
@@ -105,6 +113,15 @@ class DebugViewService extends ChangeNotifier {
           return pick == 0;
         },
         selection: _selection,
+        runInTerminal: _runInTerminal,
+        openTerminal: ({title, cwd}) async => switch (terminals?.call()) {
+          final terminals? => openDebugTerminal(
+            terminals,
+            title: title,
+            cwd: cwd,
+          ),
+          null => null,
+        },
         reveal: (doc, range, {required focus}) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (host.context == null || !identical(workspace.active, doc)) {
@@ -131,6 +148,40 @@ class DebugViewService extends ChangeNotifier {
       _owned = debug;
       _follow();
     });
+  }
+
+  /// What a debug adapter asks to run in a terminal (DAP's `runInTerminal`,
+  /// lldb-dap's launcher of the program debugged): a terminal of the
+  /// panel's that runs it, shown, and kept once the program exits until a
+  /// key is pressed, for what it printed. Its process id is not told: the
+  /// adapter does without.
+  Future<int?> _runInTerminal(Json args, String sessionId) async {
+    final terminals = this.terminals?.call();
+    final command = [
+      for (final argument in args.list('args') ?? const <Object?>[])
+        if (argument is String) argument,
+    ];
+    if (terminals == null || command.isEmpty) {
+      throw StateError('No terminal to run the program in.');
+    }
+    final instance = terminals.create(
+      config: TerminalLaunchConfig(
+        name: args.str('title'),
+        executable: command.first,
+        arguments: command.sublist(1),
+        cwd: args.str('cwd'),
+        env: switch (args.obj('env')) {
+          final env? => {
+            for (final MapEntry(:key, :value) in env.entries)
+              key: value is String ? value : null,
+          },
+          null => null,
+        },
+        waitOnExit: (_) => null,
+      ),
+    );
+    terminals.show(instance);
+    return null;
   }
 
   /// [workspace] left: its debugger disposed.

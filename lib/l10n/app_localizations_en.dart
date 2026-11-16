@@ -1172,6 +1172,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cmdShowSourceControl => 'Show Source Control';
 
   @override
+  String get cmdCategoryDebug => 'Debug';
+
+  @override
+  String get cmdShowRunAndDebug => 'Show Run and Debug';
+
+  @override
+  String get cmdToggleDebugConsole => 'Toggle Debug Console';
+
+  @override
+  String get cmdDebugStart => 'Start Debugging';
+
+  @override
+  String get cmdDebugStartFromConfig => 'Start Debugging from Configuration';
+
+  @override
+  String get cmdDebugRun => 'Run Without Debugging';
+
+  @override
+  String get cmdDebugStop => 'Stop Debugging';
+
+  @override
+  String get cmdDebugRestart => 'Restart Debugging';
+
+  @override
+  String get cmdDebugContinue => 'Continue';
+
+  @override
+  String get cmdDebugPause => 'Pause';
+
+  @override
+  String get cmdDebugStepOver => 'Step Over';
+
+  @override
+  String get cmdDebugStepInto => 'Step Into';
+
+  @override
+  String get cmdDebugStepOut => 'Step Out';
+
+  @override
+  String get cmdDebugAddConfiguration => 'Add Configuration...';
+
+  @override
+  String get cmdDebugOpenLaunchJson => 'Open \'launch.json\'';
+
+  @override
+  String get cmdToggleBreakpoint => 'Toggle Breakpoint';
+
+  @override
   String get cmdShowExtensions => 'Show Extensions';
 
   @override

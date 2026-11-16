@@ -41,9 +41,12 @@ final class DebugSettings {
     final lazy = j['autoExpandLazyVariables'];
     return DebugSettings(
       openDebug: j.str('openDebug') ?? 'openOnDebugBreak',
-      internalConsoleOptions: j.str('internalConsoleOptions') ?? 'openOnFirstSessionStart',
+      internalConsoleOptions:
+          j.str('internalConsoleOptions') ?? 'openOnFirstSessionStart',
       focusEditorOnBreak: j['focusEditorOnBreak'] != false,
-      autoExpandLazyVariables: lazy is bool ? (lazy ? 'on' : 'off') : (lazy as String?) ?? 'auto',
+      autoExpandLazyVariables: lazy is bool
+          ? (lazy ? 'on' : 'off')
+          : (lazy as String?) ?? 'auto',
       repl: ReplSettings(
         collapseIdenticalLines: console['collapseIdenticalLines'] != false,
         maximumLines: console.integer('maximumLines') ?? 10000,
@@ -101,7 +104,12 @@ final class DebugActiveEditor {
 
 /// One choice of [DebugServiceHost.pick].
 final class DebugPickItem<T> {
-  const DebugPickItem(this.label, this.value, {this.description, this.separatorBefore});
+  const DebugPickItem(
+    this.label,
+    this.value, {
+    this.description,
+    this.separatorBefore,
+  });
 
   final String label;
   final String? description;
@@ -111,9 +119,22 @@ final class DebugPickItem<T> {
   final String? separatorBefore;
 }
 
+/// Why the IDE has no debuggers to offer.
+enum DebuggersUnavailable {
+  /// The project is on another machine, where no adapter is run yet.
+  remote,
+
+  /// None is offered on this platform yet.
+  platform,
+}
+
 /// The IDE, as the debug service sees it.
 class DebugServiceHost {
   String get productName => 'BaoCode';
+
+  /// Why there are no debuggers, when the IDE has none to offer here; null
+  /// when it has, or does not know.
+  DebuggersUnavailable? get debuggersUnavailable => null;
 
   String get locale => 'en';
 
@@ -129,9 +150,13 @@ class DebugServiceHost {
     DebugWorkspaceFolder? best;
     for (final folder in workspaceFolders) {
       if (folder.uri.scheme != uri.scheme) continue;
-      final root = folder.uri.path.endsWith('/') ? folder.uri.path : '${folder.uri.path}/';
+      final root = folder.uri.path.endsWith('/')
+          ? folder.uri.path
+          : '${folder.uri.path}/';
       if (path == folder.uri.path || path.startsWith(root)) {
-        if (best == null || folder.uri.path.length > best.uri.path.length) best = folder;
+        if (best == null || folder.uri.path.length > best.uri.path.length) {
+          best = folder;
+        }
       }
     }
     return best;
@@ -184,20 +209,33 @@ class DebugServiceHost {
   /// Runs a `preLaunchTask`/`postDebugTask` (a label or a task object) in
   /// [root]; the host decides about errors (`debug.onTaskErrors`). Null
   /// [task] is success.
-  Future<TaskRunResult> runTask(DebugWorkspaceFolder? root, Object? task, {bool checkErrors = true}) async =>
-      TaskRunResult.success;
+  Future<TaskRunResult> runTask(
+    DebugWorkspaceFolder? root,
+    Object? task, {
+    bool checkErrors = true,
+  }) async => TaskRunResult.success;
 
   /// Cancels running pre-launch tasks.
   void cancelTasks() {}
 
   /// Runs a command (`${command:x}`, `inputs` of type `command`).
-  Future<Object?> executeCommand(String id, [List<Object?> args = const []]) async => null;
+  Future<Object?> executeCommand(
+    String id, [
+    List<Object?> args = const [],
+  ]) async => null;
 
   /// A text input (`promptString`); null when cancelled.
-  Future<String?> showInputBox({String? prompt, String? value, bool password = false}) async => null;
+  Future<String?> showInputBox({
+    String? prompt,
+    String? value,
+    bool password = false,
+  }) async => null;
 
   /// A quick pick; null when cancelled.
-  Future<T?> pick<T>(List<DebugPickItem<T>> items, {String? placeholder}) async => null;
+  Future<T?> pick<T>(
+    List<DebugPickItem<T>> items, {
+    String? placeholder,
+  }) async => null;
 
   /// Opens [uri], with [selection] revealed.
   Future<void> openEditor(
@@ -210,8 +248,12 @@ class DebugServiceHost {
 
   /// A source that only the adapter has (`debug:` URIs): the glue opens it
   /// with the content from [DebugSession.loadSource].
-  Future<void> openDebugSource(DebugSession session, VsUri uri, {DebugRange? selection, bool preserveFocus = true}) =>
-      openEditor(uri, selection: selection, preserveFocus: preserveFocus);
+  Future<void> openDebugSource(
+    DebugSession session,
+    VsUri uri, {
+    DebugRange? selection,
+    bool preserveFocus = true,
+  }) => openEditor(uri, selection: selection, preserveFocus: preserveFocus);
 
   void showError(String message) {}
 

@@ -445,6 +445,7 @@ class IdeWorkbenchState extends State<IdeWorkbench> {
           _ => null,
         },
         settings: widget.settings,
+        terminals: () => _terminalView.terminals,
       ),
     );
     _services.add(ListService());

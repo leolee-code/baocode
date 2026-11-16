@@ -17,7 +17,9 @@
 // ([DebugTypeRegistry.setExtensions]) rather than an extension point
 // delta; when clauses go to [DebugServiceHost.evaluateWhen]; no JSON
 // schema for launch.json, telemetry endpoints or task labels; the picker
-// is [DebugServiceHost.pick].
+// is [DebugServiceHost.pick]; a language without a debugger is told so,
+// and the picker has no "Install extension...": the debuggers are the
+// app's own (../adapters/), not a marketplace's.
 
 import 'dart:convert';
 
@@ -27,6 +29,7 @@ import '../common/debug_utils.dart';
 import '../session/debug_adapter.dart';
 import '../session/debug_session.dart';
 import '../session/raw_debug_session.dart';
+import '../ui/debug_strings.dart';
 import 'debug_configuration_manager.dart';
 import 'debug_host.dart';
 import 'debug_service.dart';
@@ -83,7 +86,12 @@ class Debugger implements RawDebugger {
 
   /// Copies [source] into [destination]; values there stay unless
   /// [overwrite] (`mixin`). The top `type` never changes.
-  static Object? _mixin(Object? destination, Object? source, bool overwrite, [int level = 0]) {
+  static Object? _mixin(
+    Object? destination,
+    Object? source,
+    bool overwrite, [
+    int level = 0,
+  ]) {
     if (destination is! Map<String, Object?>) return source;
     if (source is Map) {
       for (final e in source.entries) {
@@ -93,7 +101,9 @@ class Debugger implements RawDebugger {
         if (existing is Map<String, Object?> && e.value is Map) {
           _mixin(existing, e.value, overwrite, level + 1);
         } else if (destination.containsKey(key)) {
-          if (overwrite && !(level == 0 && key == 'type')) destination[key] = jsonClone(e.value);
+          if (overwrite && !(level == 0 && key == 'type')) {
+            destination[key] = jsonClone(e.value);
+          }
         } else {
           destination[key] = jsonClone(e.value);
         }
@@ -114,7 +124,11 @@ class Debugger implements RawDebugger {
   Future<bool> startDebugging(Json config, String parentSessionId) {
     final service = _registry.service;
     final parentSession = service.model.getSession(parentSessionId);
-    return service.startDebugging(null, config, options: DebugSessionOptions(parentSession: parentSession));
+    return service.startDebugging(
+      null,
+      config,
+      options: DebugSessionOptions(parentSession: parentSession),
+    );
   }
 
   Future<DebugAdapter> createDebugAdapter(DebugSession session) async {
@@ -125,20 +139,30 @@ class Debugger implements RawDebugger {
   }
 
   /// Variables the adapter's factory resolves, then commands and inputs.
-  Future<Json?> substituteVariables(DebugWorkspaceFolder? folder, Json config) async {
-    final substituted = await _registry.substituteVariables(type, folder, config);
-    final service = _registry.service;
-    final result = await service.variableResolver().resolveWithInteractionReplace(
-      folder?.uri,
-      substituted,
-      section: 'launch',
-      variables: variables,
+  Future<Json?> substituteVariables(
+    DebugWorkspaceFolder? folder,
+    Json config,
+  ) async {
+    final substituted = await _registry.substituteVariables(
+      type,
+      folder,
+      config,
     );
+    final service = _registry.service;
+    final result = await service
+        .variableResolver()
+        .resolveWithInteractionReplace(
+          folder?.uri,
+          substituted,
+          section: 'launch',
+          variables: variables,
+        );
     return result as Json?;
   }
 
   @override
-  Future<int?> runInTerminal(Json args, String sessionId) => _registry.runInTerminal(type, args, sessionId);
+  Future<int?> runInTerminal(Json args, String sessionId) =>
+      _registry.runInTerminal(type, args, sessionId);
 
   String get label => _contribution.str('label') ?? type;
 
@@ -156,9 +180,12 @@ class Debugger implements RawDebugger {
   }
 
   List<Json>? get configurationSnippets =>
-      _contribution['configurationSnippets'] is List ? _contribution.objects('configurationSnippets') : null;
+      _contribution['configurationSnippets'] is List
+      ? _contribution.objects('configurationSnippets')
+      : null;
 
-  List<String>? get languages => _contribution.list('languages')?.whereType<String>().toList();
+  List<String>? get languages =>
+      _contribution.list('languages')?.whereType<String>().toList();
 
   String? get when => _contribution.str('when');
 
@@ -174,22 +201,34 @@ class Debugger implements RawDebugger {
     return w != null && _registry.service.host.evaluateWhen(w);
   }
 
-  Json? get strings => _contribution.obj('strings') ?? _contribution.obj('uiMessages');
+  Json? get strings =>
+      _contribution.obj('strings') ?? _contribution.obj('uiMessages');
 
   String? get deprecated => _contribution.str('deprecated');
 
   /// The contribution as merged.
   Json get contribution => _contribution;
 
-  bool interestedInLanguage(String languageId) => languages?.contains(languageId) ?? false;
+  bool interestedInLanguage(String languageId) =>
+      languages?.contains(languageId) ?? false;
 
-  bool hasInitialConfiguration() => _contribution['initialConfigurations'] != null;
+  bool hasInitialConfiguration() =>
+      _contribution['initialConfigurations'] != null;
 
-  bool hasDynamicConfigurationProviders() => _registry.service.configurationManager.providers
-      .hasDebugConfigurationProvider(type, DebugConfigurationProviderTriggerKind.dynamic);
+  bool hasDynamicConfigurationProviders() => _registry
+      .service
+      .configurationManager
+      .providers
+      .hasDebugConfigurationProvider(
+        type,
+        DebugConfigurationProviderTriggerKind.dynamic,
+      );
 
-  bool hasConfigurationProvider() =>
-      _registry.service.configurationManager.providers.hasDebugConfigurationProvider(type);
+  bool hasConfigurationProvider() => _registry
+      .service
+      .configurationManager
+      .providers
+      .hasDebugConfigurationProvider(type);
 
   /// A new launch.json with the contribution's `initialConfigurations` and
   /// [initialConfigs] (`getInitialConfigurationContent`).
@@ -222,7 +261,8 @@ class Debugger implements RawDebugger {
     return content;
   }
 
-  DebuggerExtension get mainExtension => _mainExtension ?? _mergedExtensions.first;
+  DebuggerExtension get mainExtension =>
+      _mainExtension ?? _mergedExtensions.first;
 }
 
 /// A guessed debugger, maybe with a configuration a dynamic provider gave
@@ -236,7 +276,11 @@ final class GuessedDebugger {
 
 /// A configuration a dynamic provider gave, and its launch.
 final class DynamicConfiguration {
-  const DynamicConfiguration({required this.label, required this.launch, required this.config});
+  const DynamicConfiguration({
+    required this.label,
+    required this.launch,
+    required this.config,
+  });
 
   final String label;
   final Launch launch;
@@ -254,12 +298,16 @@ class DebugTypeRegistry {
   List<({String language, String? when})> _breakpointContributions = [];
   List<DebuggerExtension> _extensions = [];
   final Map<String, DebugAdapterFactory> _debugAdapterFactories = {};
-  final List<({String type, Future<Json?> Function(DebugSession session) create})> _descriptorFactories = [];
+  final List<
+    ({String type, Future<Json?> Function(DebugSession session) create})
+  >
+  _descriptorFactories = [];
   final Set<String> _usedDebugTypes = {};
   final Emitter<void> _onDidRegisterDebugger = Emitter();
   final Emitter<void> _onDidDebuggersExtPointRead = Emitter();
 
-  DebugDisposable onDidRegisterDebugger(void Function() l) => _onDidRegisterDebugger.listen((_) => l());
+  DebugDisposable onDidRegisterDebugger(void Function() l) =>
+      _onDidRegisterDebugger.listen((_) => l());
   DebugDisposable onDidDebuggersExtPointRead(void Function() l) =>
       _onDidDebuggersExtPointRead.listen((_) => l());
 
@@ -304,20 +352,26 @@ class DebugTypeRegistry {
     _breakpointContributions = [
       for (final ext in extensions)
         for (final bp in ext.breakpoints)
-          if (bp['language'] case final String language) (language: language, when: bp.str('when')),
+          if (bp['language'] case final String language)
+            (language: language, when: bp.str('when')),
     ];
     _onDidDebuggersExtPointRead.fire(null);
   }
 
   /// `$registerDebugTypes`.
-  DebugDisposable registerDebugAdapterFactory(List<String> debugTypes, DebugAdapterFactory factory) {
+  DebugDisposable registerDebugAdapterFactory(
+    List<String> debugTypes,
+    DebugAdapterFactory factory,
+  ) {
     for (final t in debugTypes) {
       _debugAdapterFactories[t] = factory;
     }
     _onDidRegisterDebugger.fire(null);
     return DisposableCallback(() {
       for (final t in debugTypes) {
-        if (identical(_debugAdapterFactories[t], factory)) _debugAdapterFactories.remove(t);
+        if (identical(_debugAdapterFactories[t], factory)) {
+          _debugAdapterFactories.remove(t);
+        }
       }
     });
   }
@@ -331,15 +385,24 @@ class DebugTypeRegistry {
   }
 
   DebugAdapterTransport? createDebugAdapter(DebugSession session) =>
-      _debugAdapterFactories[session.configuration.str('type')]?.createDebugAdapter(session);
+      _debugAdapterFactories[session.configuration.str('type')]
+          ?.createDebugAdapter(session);
 
-  Future<Json> substituteVariables(String debugType, DebugWorkspaceFolder? folder, Json config) async {
+  Future<Json> substituteVariables(
+    String debugType,
+    DebugWorkspaceFolder? folder,
+    Json config,
+  ) async {
     final factory = _debugAdapterFactories[debugType];
     if (factory != null) return factory.substituteVariables(folder, config);
     return config;
   }
 
-  Future<int?> runInTerminal(String debugType, Json args, String sessionId) async {
+  Future<int?> runInTerminal(
+    String debugType,
+    Json args,
+    String sessionId,
+  ) async {
     final factory = _debugAdapterFactories[debugType];
     if (factory != null) return factory.runInTerminal(args, sessionId);
     return service.host.runInTerminal(args, sessionId);
@@ -356,7 +419,9 @@ class DebugTypeRegistry {
   }
 
   Future<Json?> getDebugAdapterDescriptor(DebugSession session) async {
-    final providers = _descriptorFactories.where((p) => p.type == session.configuration['type']).toList();
+    final providers = _descriptorFactories
+        .where((p) => p.type == session.configuration['type'])
+        .toList();
     return providers.length == 1 ? providers.first.create(session) : null;
   }
 
@@ -364,12 +429,17 @@ class DebugTypeRegistry {
 
   /// Whether breakpoints can be set in a file of [languageId].
   bool canSetBreakpointsIn(String? languageId) {
-    if (languageId == null || languageId.isEmpty || languageId == 'jsonc' || languageId == 'log') {
+    if (languageId == null ||
+        languageId.isEmpty ||
+        languageId == 'jsonc' ||
+        languageId == 'log') {
       return false;
     }
     if (service.settings().allowBreakpointsEverywhere) return true;
     return _breakpointContributions.any(
-      (b) => b.language == languageId && (b.when == null || service.host.evaluateWhen(b.when!)),
+      (b) =>
+          b.language == languageId &&
+          (b.when == null || service.host.evaluateWhen(b.when!)),
     );
   }
 
@@ -403,12 +473,16 @@ class DebugTypeRegistry {
     final language = editor?.languageId;
     if (language != null) {
       languageLabel = service.host.languageName(language);
-      final adapters = _debuggers.where((a) => a.enabled && a.interestedInLanguage(language)).toList();
+      final adapters = _debuggers
+          .where((a) => a.enabled && a.interestedInLanguage(language))
+          .toList();
       if (adapters.length == 1) return GuessedDebugger(adapters.first);
       if (adapters.length > 1) candidates = adapters;
     }
 
-    if ((languageLabel == null || gettingConfigurations || canSetBreakpointsIn(language)) &&
+    if ((languageLabel == null ||
+            gettingConfigurations ||
+            canSetBreakpointsIn(language)) &&
         candidates.isEmpty) {
       await activateDebuggers('onDebugInitialConfigurations');
       candidates = _debuggers
@@ -423,24 +497,36 @@ class DebugTypeRegistry {
     }
 
     if (candidates.isEmpty && languageLabel != null) {
-      final label = languageLabel.contains(' ') ? "'$languageLabel'" : languageLabel;
-      final confirmed = await service.host.confirm(
-        "You don't have an extension for debugging $label. Should we find a $label extension in the Marketplace?",
-      );
-      if (confirmed) await service.host.installAdditionalDebuggers(languageLabel);
+      // No marketplace of debuggers to send the user to.
+      final strings = DebugStrings.forLanguage(service.host.locale);
+      service.host.notify(switch (service.host.debuggersUnavailable) {
+        DebuggersUnavailable.remote => strings.noDebuggersRemote,
+        DebuggersUnavailable.platform => strings.noDebuggersPlatform,
+        null => strings.noDebuggerFor(languageLabel),
+      });
       return null;
     }
 
     candidates
       ..sort((a, b) => a.label.compareTo(b.label))
       ..removeWhere((a) => a.isHiddenFromDropdown);
-    final suggested = [for (final c in candidates) if (_usedDebugTypes.contains(c.type)) c];
-    final others = [for (final c in candidates) if (!_usedDebugTypes.contains(c.type)) c];
+    final suggested = [
+      for (final c in candidates)
+        if (_usedDebugTypes.contains(c.type)) c,
+    ];
+    final others = [
+      for (final c in candidates)
+        if (!_usedDebugTypes.contains(c.type)) c,
+    ];
 
     final picks = <DebugPickItem<Future<GuessedDebugger?> Function()>>[];
     for (final (i, c) in suggested.indexed) {
       picks.add(
-        DebugPickItem(c.label, () async => GuessedDebugger(c), separatorBefore: i == 0 ? 'Suggested' : null),
+        DebugPickItem(
+          c.label,
+          () async => GuessedDebugger(c),
+          separatorBefore: i == 0 ? 'Suggested' : null,
+        ),
       );
     }
     for (final (i, c) in others.indexed) {
@@ -452,37 +538,37 @@ class DebugTypeRegistry {
         ),
       );
     }
-    final dynamicProviders = await service.configurationManager.getDynamicProviders();
+    final dynamicProviders = await service.configurationManager
+        .getDynamicProviders();
     for (final (i, d) in dynamicProviders.indexed) {
       picks.add(
         DebugPickItem('More ${d.label} options...', () async {
           final cfg = await d.pick();
           final dbg = getDebugger(d.type);
-          return cfg == null || dbg == null ? null : GuessedDebugger(dbg, withConfig: cfg);
+          return cfg == null || dbg == null
+              ? null
+              : GuessedDebugger(dbg, withConfig: cfg);
         }, separatorBefore: i == 0 && picks.isNotEmpty ? '' : null),
       );
     }
-    picks.add(
-      DebugPickItem(
-        languageLabel != null ? 'Install an extension for $languageLabel...' : 'Install extension...',
-        () async {
-          await service.host.installAdditionalDebuggers(languageLabel);
-          return null;
-        },
-        separatorBefore: '',
-      ),
+    final picked = await service.host.pick(
+      picks,
+      placeholder: 'Select debugger',
     );
-    final picked = await service.host.pick(picks, placeholder: 'Select debugger');
     return picked == null ? null : picked();
   }
 
   /// Activates the extensions for [activationEvent] (and `onDebug`).
-  Future<void> activateDebuggers(String activationEvent, [String? debugType]) async {
+  Future<void> activateDebuggers(
+    String activationEvent, [
+    String? debugType,
+  ]) async {
     final host = service.host;
     await Future.wait([
       host.activateByEvent(activationEvent),
       host.activateByEvent('onDebug'),
-      if (debugType != null) host.activateByEvent('$activationEvent:$debugType'),
+      if (debugType != null)
+        host.activateByEvent('$activationEvent:$debugType'),
     ]);
   }
 

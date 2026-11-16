@@ -35,8 +35,9 @@ BaoCode **不运行 VS Code 插件的代码**。Node 扩展宿主曾经接入过
   和 `assets/lsp/mason-registry.json`，可以用语言包或 `<data>/User/lsp.json`
   覆盖，见 `lib/ide/lsp/packs/README.md`。
 - **调试**：DAP 客户端和调试视图在 `lib/debug/`，由 `lib/ide/ide_debug_host.dart`
-  接到工作台。适配器要由 BaoCode 自己注册（`DebuggerRegistry.setExtensions`）。
-  **目前一个都没有注册。**
+  接到工作台。调试适配器不从插件来，由 BaoCode 自己在 `lib/debug/adapters/`
+  里写好、注册到 `DebuggerRegistry`（`setExtensions`）。目前注册了 LLDB
+  （`lldb-dap`，调试 C/C++，支持 macOS 和 Linux x64，只能调试本地项目）。
 
 ### 例：`ms-python.python`（2026-10-11）
 

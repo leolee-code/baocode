@@ -64,6 +64,17 @@ class DebugStrings {
   String get welcomeNoFolder => _t('welcomeNoFolder');
   String get selectDebugger => _t('selectDebugger');
   String get noDebuggers => _t('noDebuggers');
+  String get noDebuggersRemote => _t('noDebuggersRemote');
+  String get noDebuggersPlatform => _t('noDebuggersPlatform');
+  String noDebuggerFor(String language) => _f('noDebuggerFor', [language]);
+
+  // Adapters.
+  String get lldbDapMissingMac => _t('lldbDapMissingMac');
+  String get lldbDapMissingLinux => _t('lldbDapMissingLinux');
+  String lldbDapPathMissing(String path) => _f('lldbDapPathMissing', [path]);
+  String get attachToProcess => _t('attachToProcess');
+  String get pickProcess => _t('pickProcess');
+  String get noProcesses => _t('noProcesses');
   String get moreActions => _t('moreActions');
 
   // Toolbar.
@@ -123,8 +134,10 @@ class DebugStrings {
   String get editLogMessage => _t('editLogMessage');
   String get enableBreakpoint => _t('enableBreakpoint');
   String get disableBreakpoint => _t('disableBreakpoint');
-  String get functionBreakpointPlaceholder => _t('functionBreakpointPlaceholder');
-  String get exceptionConditionPlaceholder => _t('exceptionConditionPlaceholder');
+  String get functionBreakpointPlaceholder =>
+      _t('functionBreakpointPlaceholder');
+  String get exceptionConditionPlaceholder =>
+      _t('exceptionConditionPlaceholder');
   String get unverifiedBreakpoint => _t('unverifiedBreakpoint');
   String get disabledBreakpoint => _t('disabledBreakpoint');
   String get breakpointsDeactivated => _t('breakpointsDeactivated');
@@ -179,7 +192,16 @@ const _en = <String, String>{
   'welcomeCustomize': 'To customize Run and Debug, {link}.',
   'welcomeNoFolder': 'To customize Run and Debug, open a folder and create a launch.json file.',
   'selectDebugger': 'Select debugger',
-  'noDebuggers': 'No debug extensions are installed.',
+  'noDebuggers': 'No debugger is available.',
+  'noDebuggersRemote': 'Debugging is not available in remote projects yet.',
+  'noDebuggersPlatform': 'Debugging is not available on this platform yet.',
+  'noDebuggerFor': 'BaoCode cannot debug {0} yet.',
+  'lldbDapMissingMac': "lldb-dap was not found. Install Xcode's command line tools (xcode-select --install), or set debug.lldbDap.path in settings.json.",
+  'lldbDapMissingLinux': "lldb-dap was not found. Install your distribution's LLDB package (for example: sudo apt install lldb), or set debug.lldbDap.path in settings.json.",
+  'lldbDapPathMissing': 'debug.lldbDap.path is {0}, and there is no such file.',
+  'attachToProcess': 'Attach to Process...',
+  'pickProcess': 'Select the process to attach to',
+  'noProcesses': 'No processes were found.',
   'moreActions': 'More Actions...',
   'continue': 'Continue',
   'pause': 'Pause',
@@ -250,8 +272,7 @@ const _en = <String, String>{
   'logMessage': 'Log Message',
   'conditionPlaceholder': "Break when expression evaluates to true. 'Enter' to accept, 'esc' to cancel.",
   'hitCountPlaceholder': "Break when hit count condition is met. 'Enter' to accept, 'esc' to cancel.",
-  'logMessagePlaceholder':
-      "Message to log when breakpoint is hit. Expressions within {} are interpolated. 'Enter' to accept, 'esc' to cancel.",
+  'logMessagePlaceholder': "Message to log when breakpoint is hit. Expressions within {} are interpolated. 'Enter' to accept, 'esc' to cancel.",
   'addBreakpoint': 'Add Breakpoint',
   'addConditionalBreakpoint': 'Add Conditional Breakpoint...',
   'addLogpoint': 'Add Logpoint...',
@@ -281,7 +302,16 @@ const _zh = <String, String>{
   'welcomeCustomize': '要自定义运行和调试，请{link}。',
   'welcomeNoFolder': '要自定义运行和调试，请打开文件夹并创建 launch.json 文件。',
   'selectDebugger': '选择调试器',
-  'noDebuggers': '未安装调试扩展。',
+  'noDebuggers': '没有可用的调试器。',
+  'noDebuggersRemote': '远程项目暂不支持调试。',
+  'noDebuggersPlatform': '此平台暂不支持调试。',
+  'noDebuggerFor': 'BaoCode 暂不支持调试 {0}。',
+  'lldbDapMissingMac': '未找到 lldb-dap。请安装 Xcode 命令行工具（xcode-select --install），或在 settings.json 中设置 debug.lldbDap.path。',
+  'lldbDapMissingLinux': '未找到 lldb-dap。请安装发行版的 LLDB 软件包（例如 sudo apt install lldb），或在 settings.json 中设置 debug.lldbDap.path。',
+  'lldbDapPathMissing': 'debug.lldbDap.path 为 {0}，但该文件不存在。',
+  'attachToProcess': '附加到进程...',
+  'pickProcess': '选择要附加的进程',
+  'noProcesses': '未找到进程。',
   'moreActions': '更多操作...',
   'continue': '继续',
   'pause': '暂停',

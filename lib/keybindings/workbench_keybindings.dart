@@ -21,7 +21,9 @@
 // find/: the terminal's),
 // src/vs/workbench/contrib/markers/browser/markers.contribution.ts,
 // extensions/references-view/package.json and
-// src/vs/workbench/contrib/scm/browser/scm.contribution.ts; the context
+// src/vs/workbench/contrib/scm/browser/scm.contribution.ts and
+// src/vs/workbench/contrib/debug/browser/ (debug.contribution.ts,
+// debugCommands.ts, debugEditorActions.ts); the context
 // keys are those of
 // src/vs/platform/quickinput/browser/quickInput.ts (`inQuickInput`,
 // `quickInputType`, `cursorAtEndOfQuickInputBox`),
@@ -46,6 +48,8 @@
 // - Replace All (⌥⌘Enter / Ctrl+Alt+Enter) applies only while the Search
 //   view has the keyboard (upstream's rule applies wherever it shows, and
 //   does nothing elsewhere).
+// - The debugger's keys come after the window's ([debugKeybindings]): F11
+//   steps into while a session is stopped, and is full screen otherwise.
 // - Clear Input (Escape) does not read the suggest widget's and inline
 //   suggestions' keys (the commit input has neither); its selection is
 //   checked by the command.
@@ -562,6 +566,79 @@ final List<CommandInfo> workbenchExtraCommands = [
     category: _sourceControl,
   ),
   const CommandInfo('scm.clearInput', 'Clear Input', category: _sourceControl),
+  // The debugger's (debug.contribution.ts, debugCommands.ts,
+  // debugEditorActions.ts).
+  const CommandInfo(
+    'workbench.view.debug',
+    'Show Run and Debug',
+    category: _view,
+  ),
+  const CommandInfo(
+    'workbench.debug.action.toggleRepl',
+    'Toggle Debug Console',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'workbench.action.debug.start',
+    'Start Debugging',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'debug.startFromConfig',
+    'Start Debugging from Configuration',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'workbench.action.debug.run',
+    'Run Without Debugging',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'workbench.action.debug.stop',
+    'Stop Debugging',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'workbench.action.debug.restart',
+    'Restart Debugging',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'workbench.action.debug.continue',
+    'Continue',
+    category: _debug,
+  ),
+  const CommandInfo('workbench.action.debug.pause', 'Pause', category: _debug),
+  const CommandInfo(
+    'workbench.action.debug.stepOver',
+    'Step Over',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'workbench.action.debug.stepInto',
+    'Step Into',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'workbench.action.debug.stepOut',
+    'Step Out',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'workbench.action.debug.configure',
+    "Open 'launch.json'",
+    category: _debug,
+  ),
+  const CommandInfo(
+    'debug.addConfiguration',
+    'Add Configuration...',
+    category: _debug,
+  ),
+  const CommandInfo(
+    'editor.debug.action.toggleBreakpoint',
+    'Toggle Breakpoint',
+    category: _debug,
+  ),
 ];
 
 /// Their default keybindings, as keybindings.json writes them.
@@ -1202,9 +1279,12 @@ const Set<String> workbenchContextKeys = {
   'auxiliaryBarVisible',
   'auxiliaryBarFocus',
   'focusedView',
-  // Upstream's debugger's, never set here.
+  // The debugger's: `inDebugMode`, `debugState` and `debuggersAvailable` by
+  // DebugContribution, `inDebugRepl` by the layout.
   'inDebugMode',
   'inDebugRepl',
+  'debugState',
+  'debuggersAvailable',
   // The Search view's (search/common/constants.ts `SearchContext`).
   'searchViewletVisible',
   'searchViewletFocus',
@@ -1265,6 +1345,7 @@ const _list = 'List';
 const _terminal = 'Terminal';
 const _references = 'References';
 const _gitCategory = 'Git';
+const _debug = 'Debug';
 const _sourceControl = 'Source Control';
 
 const _inQuickPick = "inQuickInput && quickInputType == 'quickPick'";
@@ -1352,3 +1433,71 @@ List<KeybindingEntry> _quickInputKeys(
     KeybindingEntry(key: chord(), command: command, when: when),
   ];
 }
+
+/// The debugger's default keybindings (debug.contribution.ts,
+/// debugCommands.ts, debugEditorActions.ts): after the window's, so that
+/// F11 steps into where a session is stopped and shows full screen
+/// (Windows, Linux) otherwise.
+final List<KeybindingEntry> debugKeybindings = [
+  const KeybindingEntry(
+    key: 'f5',
+    command: 'workbench.action.debug.start',
+    when: "debuggersAvailable && debugState == 'inactive'",
+  ),
+  const KeybindingEntry(
+    key: 'f5',
+    command: 'workbench.action.debug.continue',
+    when: "debugState == 'stopped'",
+  ),
+  const KeybindingEntry(
+    key: 'ctrl+f5',
+    command: 'workbench.action.debug.run',
+    when: "debuggersAvailable && debugState != 'initializing'",
+  ),
+  const KeybindingEntry(
+    key: 'shift+f5',
+    command: 'workbench.action.debug.stop',
+    when: 'inDebugMode',
+  ),
+  const KeybindingEntry(
+    key: 'ctrl+shift+f5',
+    mac: 'shift+cmd+f5',
+    command: 'workbench.action.debug.restart',
+    when: 'inDebugMode',
+  ),
+  const KeybindingEntry(
+    key: 'f6',
+    command: 'workbench.action.debug.pause',
+    when: "debugState == 'running'",
+  ),
+  const KeybindingEntry(
+    key: 'f10',
+    command: 'workbench.action.debug.stepOver',
+    when: "debugState == 'stopped'",
+  ),
+  const KeybindingEntry(
+    key: 'f11',
+    command: 'workbench.action.debug.stepInto',
+    when: "debugState == 'stopped'",
+  ),
+  const KeybindingEntry(
+    key: 'shift+f11',
+    command: 'workbench.action.debug.stepOut',
+    when: "debugState == 'stopped'",
+  ),
+  const KeybindingEntry(
+    key: 'f9',
+    command: 'editor.debug.action.toggleBreakpoint',
+    when: 'editorTextFocus',
+  ),
+  const KeybindingEntry(
+    key: 'ctrl+shift+d',
+    mac: 'shift+cmd+d',
+    command: 'workbench.view.debug',
+  ),
+  const KeybindingEntry(
+    key: 'ctrl+shift+y',
+    mac: 'shift+cmd+y',
+    command: 'workbench.debug.action.toggleRepl',
+  ),
+];

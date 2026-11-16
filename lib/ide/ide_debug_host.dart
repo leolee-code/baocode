@@ -1,15 +1,20 @@
 // The IDE behind the ported debug service (lib/debug): its folders,
 // settings, editors, quick input and notifications. The adapters are
-// BaoCode's own (registered on the service's registry); no extension runs.
+// BaoCode's own (lib/debug/adapters, registered on the service's
+// registry); no extension runs.
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi' show Abi;
 import 'dart:io';
 
 import 'package:crypto/crypto.dart' show md5;
 import 'package:path/path.dart' as p;
 
 import '../base/uri.dart' show VsUri;
+import '../debug/adapters/lldb_dap.dart';
+import '../debug/adapters/native_debugger.dart';
+import '../debug/adapters/process_list.dart';
 import '../debug/common/debug_model.dart';
 import '../debug/common/debug_storage.dart';
 import '../debug/common/debug_types.dart';
@@ -18,9 +23,10 @@ import '../debug/service/debug_configuration_manager.dart';
 import '../debug/service/debug_host.dart';
 import '../debug/service/debug_service.dart';
 import '../debug/session/debug_session.dart';
+import '../debug/ui/debug_strings.dart';
 import '../extensions/window/json_state_store.dart';
 import '../settings/user_settings.dart';
-import 'file_service.dart' show IdeFileService;
+import 'file_service.dart' show IdeFileService, IdeHostFiles;
 import 'ide_notifications.dart';
 import 'ide_quick_input.dart';
 import 'ide_workspace.dart';
@@ -90,9 +96,18 @@ final class IdeDebugHost extends DebugServiceHost {
     this.confirmHost,
     this.selectionHost,
     this.revealHost,
+    this.debuggersUnavailable,
+    this.processes = listDebugProcesses,
   });
 
   final IdeWorkspace workspace;
+
+  @override
+  final DebuggersUnavailable? debuggersUnavailable;
+
+  /// The processes one can be picked of to attach to
+  /// (`${command:pickProcess}`).
+  final Future<List<DebugProcess>> Function() processes;
 
   /// `settings.json`, for the `debug.*` settings and `launch`.
   final UserSettings? settingsFile;
@@ -405,6 +420,32 @@ final class IdeDebugHost extends DebugServiceHost {
     }
   }
 
+  /// `${command:pickProcess}`: the id of the process picked. Nothing
+  /// picked ends the start, where no answer would leave the variable in
+  /// the configuration as it is written.
+  @override
+  Future<Object?> executeCommand(
+    String id, [
+    List<Object?> args = const [],
+  ]) async {
+    if (id != pickProcessCommand) return null;
+    final strings = DebugStrings.forLanguage(language);
+    final running = await processes();
+    if (running.isEmpty) showError(strings.noProcesses);
+    final picked = running.isEmpty
+        ? null
+        : await pick<DebugProcess>([
+            for (final process in running)
+              DebugPickItem(
+                process.name,
+                process,
+                description: '${process.pid}  ${process.command}',
+              ),
+          ], placeholder: strings.pickProcess);
+    if (picked == null) throw const DebugCancelledError();
+    return '${picked.pid}';
+  }
+
   @override
   void openDebugView() => onOpenDebugView?.call();
 
@@ -434,7 +475,18 @@ final class IdeDebug {
     ({int start, int end})? Function()? selection,
     void Function(IdeDocument doc, LspRange? range, {required bool focus})?
     reveal,
+    RunInTerminal? runInTerminal,
+    OpenDebugTerminal? openTerminal,
+    List<NativeDebugger> debuggers = const [LldbDapDebugger()],
   }) async {
+    // The adapters run on this machine: none for a project on another, nor
+    // where there is no build of the app to try them on.
+    final unavailable = workspace.files is IdeHostFiles
+        ? DebuggersUnavailable.remote
+        : !(Platform.isMacOS ||
+              Platform.isLinux && Abi.current() == Abi.linuxX64)
+        ? DebuggersUnavailable.platform
+        : null;
     final host = IdeDebugHost(
       workspace: workspace,
       settingsFile: settings,
@@ -443,6 +495,7 @@ final class IdeDebug {
       confirmHost: confirm,
       selectionHost: selection,
       revealHost: reveal,
+      debuggersUnavailable: unavailable,
     );
     final state = userDirectory == null || !workspace.hasFolder
         ? null
@@ -466,6 +519,14 @@ final class IdeDebug {
           : IdeDebugStorage(state),
       fileStore: IdeLaunchFiles(workspace.files, windows: host.isWindows),
     );
+    if (unavailable == null) {
+      registerNativeDebuggers(
+        service,
+        debuggers,
+        runInTerminal: runInTerminal,
+        openTerminal: openTerminal,
+      );
+    }
     final debug = IdeDebug._(host, service, state);
     unawaited(debug._initialize());
     return debug;

@@ -646,6 +646,9 @@ class IdeEditorState extends State<IdeEditor> {
     }
   }
 
+  /// The TextMate language id of the active document, once it is known.
+  String? get languageId => _textMateDocuments[widget.active]?.$2.languageId;
+
   /// The language session of the active document (tests and the
   /// workbench read its state).
   @visibleForTesting

@@ -2318,6 +2318,102 @@ abstract class AppLocalizations {
   /// **'Show Source Control'**
   String get cmdShowSourceControl;
 
+  /// No description provided for @cmdCategoryDebug.
+  ///
+  /// In en, this message translates to:
+  /// **'Debug'**
+  String get cmdCategoryDebug;
+
+  /// No description provided for @cmdShowRunAndDebug.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Run and Debug'**
+  String get cmdShowRunAndDebug;
+
+  /// No description provided for @cmdToggleDebugConsole.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle Debug Console'**
+  String get cmdToggleDebugConsole;
+
+  /// No description provided for @cmdDebugStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Debugging'**
+  String get cmdDebugStart;
+
+  /// No description provided for @cmdDebugStartFromConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Debugging from Configuration'**
+  String get cmdDebugStartFromConfig;
+
+  /// No description provided for @cmdDebugRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Run Without Debugging'**
+  String get cmdDebugRun;
+
+  /// No description provided for @cmdDebugStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Debugging'**
+  String get cmdDebugStop;
+
+  /// No description provided for @cmdDebugRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart Debugging'**
+  String get cmdDebugRestart;
+
+  /// No description provided for @cmdDebugContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get cmdDebugContinue;
+
+  /// No description provided for @cmdDebugPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get cmdDebugPause;
+
+  /// No description provided for @cmdDebugStepOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Step Over'**
+  String get cmdDebugStepOver;
+
+  /// No description provided for @cmdDebugStepInto.
+  ///
+  /// In en, this message translates to:
+  /// **'Step Into'**
+  String get cmdDebugStepInto;
+
+  /// No description provided for @cmdDebugStepOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Step Out'**
+  String get cmdDebugStepOut;
+
+  /// No description provided for @cmdDebugAddConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Configuration...'**
+  String get cmdDebugAddConfiguration;
+
+  /// No description provided for @cmdDebugOpenLaunchJson.
+  ///
+  /// In en, this message translates to:
+  /// **'Open \'launch.json\''**
+  String get cmdDebugOpenLaunchJson;
+
+  /// No description provided for @cmdToggleBreakpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle Breakpoint'**
+  String get cmdToggleBreakpoint;
+
   /// No description provided for @cmdShowExtensions.
   ///
   /// In en, this message translates to:

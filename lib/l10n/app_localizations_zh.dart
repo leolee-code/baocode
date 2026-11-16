@@ -1141,6 +1141,54 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cmdShowSourceControl => '显示源代码管理';
 
   @override
+  String get cmdCategoryDebug => '调试';
+
+  @override
+  String get cmdShowRunAndDebug => '显示运行和调试';
+
+  @override
+  String get cmdToggleDebugConsole => '切换调试控制台';
+
+  @override
+  String get cmdDebugStart => '开始调试';
+
+  @override
+  String get cmdDebugStartFromConfig => '从配置开始调试';
+
+  @override
+  String get cmdDebugRun => '以非调试模式运行';
+
+  @override
+  String get cmdDebugStop => '停止调试';
+
+  @override
+  String get cmdDebugRestart => '重启调试';
+
+  @override
+  String get cmdDebugContinue => '继续';
+
+  @override
+  String get cmdDebugPause => '暂停';
+
+  @override
+  String get cmdDebugStepOver => '单步跳过';
+
+  @override
+  String get cmdDebugStepInto => '单步调试';
+
+  @override
+  String get cmdDebugStepOut => '单步跳出';
+
+  @override
+  String get cmdDebugAddConfiguration => '添加配置...';
+
+  @override
+  String get cmdDebugOpenLaunchJson => '打开 \"launch.json\"';
+
+  @override
+  String get cmdToggleBreakpoint => '切换断点';
+
+  @override
   String get cmdShowExtensions => '显示扩展';
 
   @override

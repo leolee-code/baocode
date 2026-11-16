@@ -4,7 +4,11 @@
 
 import 'dart:io';
 
+import 'package:baocode/debug/adapters/lldb_dap.dart';
+import 'package:baocode/debug/adapters/process_list.dart';
+import 'package:baocode/debug/common/debug_types.dart';
 import 'package:baocode/ide/ide_debug_host.dart';
+import 'package:baocode/ide/ide_quick_input.dart';
 import 'package:baocode/ide/ide_workspace.dart';
 import 'package:baocode/ide/lsp/lsp_protocol.dart';
 import 'package:baocode/settings/user_settings.dart';
@@ -154,5 +158,77 @@ void main() {
       ..openDebugView()
       ..openRepl();
     expect(opened, ['view', 'repl']);
+  });
+
+  group(r'${command:pickProcess}', () {
+    const running = [
+      DebugProcess(pid: 311, name: 'server', command: '/srv/bin/server -p 80'),
+      DebugProcess(pid: 42, name: 'worker', command: '/srv/bin/worker'),
+    ];
+
+    test('lists the processes and gives the id of the one picked', () async {
+      IdeQuickPick? shown;
+      final host = IdeDebugHost(
+        workspace: workspace,
+        processes: () async => running,
+        pickHost: (model) {
+          shown = model as IdeQuickPick;
+          final items = shown!.items.whereType<IdeQuickPickItem>().toList();
+          shown!.onDidAccept?.call(items[1]);
+        },
+      );
+      expect(await host.executeCommand(pickProcessCommand), '42');
+      final items = shown!.items.whereType<IdeQuickPickItem>().toList();
+      expect(items.map((item) => item.label), ['server', 'worker']);
+      expect(items.first.description, '311  /srv/bin/server -p 80');
+      // Typing a pid or a part of the command line finds it.
+      expect(shown!.matchOnDescription, isTrue);
+      expect(shown!.placeholder, 'Select the process to attach to');
+    });
+
+    test('nothing picked ends the start', () async {
+      final host = IdeDebugHost(
+        workspace: workspace,
+        processes: () async => running,
+        pickHost: (model) => model.onDidHide?.call(),
+      );
+      await expectLater(
+        host.executeCommand(pickProcessCommand),
+        throwsA(isA<DebugCancelledError>()),
+      );
+    });
+
+    test('no processes: said, and the start ends', () async {
+      final host = IdeDebugHost(
+        workspace: workspace,
+        language: 'zh',
+        processes: () async => const [],
+        pickHost: (model) => fail('nothing to pick from'),
+      );
+      await expectLater(
+        host.executeCommand(pickProcessCommand),
+        throwsA(isA<DebugCancelledError>()),
+      );
+      expect(workspace.notifications.notifications.map((n) => n.message), [
+        '未找到进程。',
+      ]);
+    });
+
+    test('another command is not its to run', () async {
+      final host = IdeDebugHost(workspace: workspace);
+      expect(await host.executeCommand('some.other.command'), isNull);
+    });
+  });
+
+  group('IdeDebug.open', () {
+    test('offers LLDB for a project on this machine', () async {
+      final debug = await IdeDebug.open(
+        workspace: workspace,
+        userDirectory: null,
+      );
+      addTearDown(debug.dispose);
+      expect(debug.host.debuggersUnavailable, isNull);
+      expect(debug.service.registry.getDebugger(lldbDapType), isNotNull);
+    }, testOn: 'mac-os');
   });
 }

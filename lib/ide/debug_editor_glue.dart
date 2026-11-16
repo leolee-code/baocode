@@ -360,6 +360,28 @@ class _DebugGlyphMarginState extends State<DebugGlyphMargin> {
 bool debugCanSetBreakpoints(DebugService service, String? languageId) =>
     service.canSetBreakpointsIn(languageId);
 
+/// Toggle Breakpoint (`editor.debug.action.toggleBreakpoint`): removes the
+/// breakpoints on [lineNumber] of [uri], or adds one where a file of
+/// [languageId] takes them. Whether it did anything.
+Future<bool> debugToggleBreakpoint(
+  DebugService service,
+  VsUri uri,
+  int lineNumber,
+  String? languageId,
+) async {
+  final existing = service.model.getBreakpoints(
+    uri: uri,
+    lineNumber: lineNumber,
+  );
+  if (existing.isNotEmpty) {
+    await service.removeBreakpoints([for (final bp in existing) bp.getId()]);
+    return true;
+  }
+  if (!debugCanSetBreakpoints(service, languageId)) return false;
+  await service.addBreakpoints(uri, [BreakpointData(lineNumber: lineNumber)]);
+  return true;
+}
+
 /// The content of a `debug:` source, from its session (`debugContentProvider`).
 Future<String?> debugSourceContent(DebugService service, VsUri uri) async {
   if (uri.scheme != debugScheme) return null;

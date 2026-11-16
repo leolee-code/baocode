@@ -13,6 +13,7 @@
 import 'dart:async';
 
 import '../../base/cancellation.dart' show CancellationTokenSource;
+
 import 'package:flutter/material.dart';
 
 import '../../ide/ide_hover.dart';
@@ -93,6 +94,37 @@ class RunAndDebugViewState extends State<RunAndDebugView> {
     );
   }
 
+  /// The debuggers' own ways to attach: those of their initial
+  /// configurations that do, which ask for the process as they start
+  /// (`${command:pickProcess}`).
+  List<Json> get _attachConfigurations => [
+    for (final debugger in service.registry.debuggers)
+      if (debugger.enabled)
+        for (final config
+            in debugger.contribution.list('initialConfigurations') ??
+                const <Object?>[])
+          if (config is Json && config['request'] == 'attach') config,
+  ];
+
+  /// Attaches to a process picked, with no launch.json written for it: by
+  /// the one debugger that can, else the one picked first.
+  Future<void> attachToProcess() async {
+    final configs = _attachConfigurations;
+    if (configs.isEmpty) return;
+    final config = configs.length == 1
+        ? configs.single
+        : await service.host.pick<Json>([
+            for (final config in configs)
+              DebugPickItem(
+                service.registry.getDebuggerLabel(config.str('type') ?? '') ??
+                    config.str('type') ??
+                    '',
+                config,
+              ),
+          ], placeholder: DebugStrings.of(context).selectDebugger);
+    if (config != null) await start(config: jsonClone(config) as Json);
+  }
+
   /// The configuration picker of the dropdown.
   Future<LaunchConfigurationEntry?> _pickConfiguration() async {
     final all = manager.getAllConfigurations();
@@ -146,6 +178,13 @@ class RunAndDebugViewState extends State<RunAndDebugView> {
             onSelected: () => unawaited(_createLaunchJson()),
           ),
         ],
+        if (_attachConfigurations.isNotEmpty)
+          [
+            IdeMenuAction(
+              s.attachToProcess,
+              onSelected: () => unawaited(attachToProcess()),
+            ),
+          ],
       ]),
     );
   }
@@ -171,7 +210,12 @@ class RunAndDebugViewState extends State<RunAndDebugView> {
         .where((d) => d.enabled)
         .toList();
     if (debuggers.isEmpty) {
-      service.host.showError(DebugStrings.of(context).noDebuggers);
+      final s = DebugStrings.of(context);
+      service.host.showError(switch (service.host.debuggersUnavailable) {
+        DebuggersUnavailable.remote => s.noDebuggersRemote,
+        DebuggersUnavailable.platform => s.noDebuggersPlatform,
+        null => s.noDebuggers,
+      });
       return Future.value(null);
     }
     if (debuggers.length == 1) return Future.value(debuggers.first);
