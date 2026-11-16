@@ -84,7 +84,7 @@ La CI compile et publie les versions lorsqu'un tag `v*` est poussé. Versions, s
 
 ## Retours
 
-Les issues et les Pull Requests sont les bienvenues. Discutez d'abord d'un changement dans une issue ; les Pull Requests trop volumineuses ou non discutées au préalable ne sont pas acceptées. Voir [CONTRIBUTING.md](CONTRIBUTING.md).
+Les issues et les Pull Requests sont les bienvenues. Voir [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence
 

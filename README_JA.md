@@ -84,7 +84,7 @@ dart run tool/build_remote_server.dart    # Linux x64 / arm64 用の SSH リモ�
 
 ## フィードバック
 
-Issue と Pull Request を歓迎します。変更はまず Issue で相談してください。大きすぎる Pull Request や、事前に相談のない Pull Request は受け付けません。詳しくは [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
+Issue と Pull Request を歓迎します。詳しくは [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 
 ## ライセンス
 

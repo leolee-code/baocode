@@ -84,7 +84,7 @@ La CI compila y publica las versiones cuando se envía un tag `v*`. Consulta [do
 
 ## Comentarios
 
-Se agradecen las issues y las Pull Requests. Comente primero el cambio en una issue; no se aceptan Pull Requests demasiado grandes ni las que no se hayan discutido antes. Consulte [CONTRIBUTING.md](CONTRIBUTING.md).
+Se agradecen las issues y las Pull Requests. Consulte [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licencia
 
