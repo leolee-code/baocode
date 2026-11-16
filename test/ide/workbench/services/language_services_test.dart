@@ -8,6 +8,7 @@ import 'package:baocode/ide/ide_workspace.dart';
 import 'package:baocode/ide/lsp/lsp_protocol.dart';
 import 'package:baocode/ide/lsp_ui/lsp_convert.dart';
 import 'package:baocode/ide/lsp_ui/problems_panel.dart';
+import 'package:baocode/ide/lsp_ui/workspace_symbols.dart';
 import 'package:baocode/ide/services/language.dart';
 import 'package:baocode/ide/services/problems.dart';
 import 'package:baocode/ide/services/references.dart';
@@ -18,6 +19,7 @@ import 'package:baocode/ide/workbench/contributions/language.dart';
 import 'package:baocode/ide/workbench/services.dart';
 import 'package:baocode/ide/workbench/statusbar.dart';
 import 'package:baocode/l10n/app_localizations.dart';
+import 'package:path/path.dart' as p;
 
 import '../../lsp_ui/fake_language_features.dart';
 import '../fake_files.dart';
@@ -27,8 +29,9 @@ LspRange _at(int line, int start, int end) =>
     LspRange(LspPosition(line, start), LspPosition(line, end));
 
 /// The language servers' services alone, over a workspace with scripted
-/// servers: the servers' edits, the problems stepped through and counted,
-/// the references stepped through, and their context keys.
+/// servers: the servers' edits, the workspace's symbols searched, the
+/// problems stepped through and counted, the references stepped through,
+/// and their context keys.
 void main() {
   late FakeLanguageFeatures languages;
   late IdeWorkspace workspace;
@@ -118,6 +121,158 @@ void main() {
     await tester.pump();
     expect(answer, isTrue);
     expect(applied, [same(edit)]);
+  });
+
+  testWidgets('workspace symbols: asked once the typing rests, the last '
+      'query\'s answer kept, opened where they are', (tester) async {
+    await setUpServices(tester);
+    final symbols = language.workspaceSymbols!;
+    final answers = <String, Completer<List<LspWorkspaceSymbol>>>{};
+    languages.onWorkspaceSymbols = (query) =>
+        (answers[query] = Completer()).future;
+    var changes = 0;
+    symbols.addListener(() => changes++);
+    LspWorkspaceSymbol symbol(String name, String path, [LspRange? range]) =>
+        LspWorkspaceSymbol(
+          name: name,
+          kind: LspSymbolKind.function,
+          uri: Uri.file(path).toString(),
+          range: range,
+        );
+
+    // Typed on before the delay is over: asked once, for what is there.
+    symbols.search('f');
+    expect(symbols.loading, isTrue);
+    await tester.pump(const Duration(milliseconds: 100));
+    symbols.search('fo');
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(languages.requests, isEmpty);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(languages.requests, ['workspaceSymbols fo']);
+
+    // An answer to a query no longer the one typed is not kept.
+    symbols.search('foo');
+    await tester.pump(IdeWorkspaceSymbols.delay);
+    answers['fo']!.complete([symbol('fo', inRoot('a.dart'))]);
+    await tester.pump();
+    expect(symbols.symbols, isEmpty);
+    expect(symbols.loading, isTrue);
+    expect(changes, 0);
+    final outside = p.join(p.dirname(testRoot), 'sdk', 'c.dart');
+    answers['foo']!.complete([
+      symbol('foo', inRoot('b.dart'), _at(2, 4, 7)),
+      symbol('food', outside),
+    ]);
+    await tester.pump();
+    expect(symbols.loading, isFalse);
+    expect(symbols.symbols.map((s) => s.name), ['foo', 'food']);
+    expect(changes, 1);
+
+    // The same query again asks nothing.
+    symbols.search(' foo ');
+    expect(symbols.loading, isFalse);
+    await tester.pump(IdeWorkspaceSymbols.delay);
+    expect(languages.count('workspaceSymbols'), 2);
+
+    // Named from the workspace's folder; opened at its start, the top of
+    // the file of one without a place.
+    final [inside, elsewhere] = symbols.symbols;
+    expect(language.workspaceSymbolFile(inside), 'b.dart');
+    expect(language.workspaceSymbolFile(elsewhere), outside);
+    language
+      ..openWorkspaceSymbol(inside)
+      ..openWorkspaceSymbol(elsewhere);
+    expect(host.locations, [
+      IdeLocation(inRoot('b.dart'), _at(2, 4, 4)),
+      IdeLocation(outside, _at(0, 0, 0)),
+    ]);
+
+    // Emptied: nothing kept, nothing asked.
+    symbols.search('');
+    expect(symbols.symbols, isEmpty);
+    expect(symbols.loading, isFalse);
+    await tester.pump(IdeWorkspaceSymbols.delay);
+    expect(languages.count('workspaceSymbols'), 2);
+  });
+
+  testWidgets('workspace symbols: none without a server that searches them, '
+      'asked once one runs', (tester) async {
+    await setUpServices(tester);
+    final symbols = language.workspaceSymbols!;
+    languages
+      ..workspaceSymbolsSupported = false
+      ..onWorkspaceSymbols = (query) => [
+        LspWorkspaceSymbol(
+          name: query,
+          kind: LspSymbolKind.klass,
+          uri: Uri.file(inRoot('a.dart')).toString(),
+        ),
+      ];
+    var changes = 0;
+    symbols.addListener(() => changes++);
+    symbols.search('foo');
+    expect(symbols.supported, isFalse);
+    expect(symbols.loading, isFalse);
+    await tester.pump(IdeWorkspaceSymbols.delay);
+    expect(languages.requests, isEmpty);
+
+    // A server started.
+    languages
+      ..workspaceSymbolsSupported = true
+      ..setStatus(inRoot('a.dart'), const []);
+    expect(symbols.loading, isTrue);
+    expect(changes, 1);
+    await tester.pump(IdeWorkspaceSymbols.delay);
+    await tester.pump();
+    expect(symbols.symbols.single.name, 'foo');
+    expect(changes, 2);
+
+    // It stopped: its answer goes.
+    languages
+      ..workspaceSymbolsSupported = false
+      ..setStatus(inRoot('a.dart'), const []);
+    expect(symbols.symbols, isEmpty);
+    expect(changes, 3);
+  });
+
+  testWidgets('switch source/header: enabled for a document clangd serves, '
+      'opens the counterpart, says when there is none', (tester) async {
+    await setUpServices(tester);
+    final registry = services.get<ActionRegistry>();
+    final statusbar = services.get<StatusbarService>();
+    final action = registry.byId('clangd.switchheadersource')!;
+    bool enabled() => action.precondition!(services);
+    Future<void> run() async {
+      action.run(services, null);
+      await tester.pump();
+    }
+
+    // No document is active.
+    languages.clangdServes = true;
+    expect(enabled(), isFalse);
+    await workspace.open(inRoot('a.dart'));
+    languages.clangdServes = false;
+    expect(enabled(), isFalse);
+
+    languages.clangdServes = true;
+    expect(enabled(), isTrue);
+    languages.onSwitchSourceHeader = (path) => inRoot('a.h');
+    await run();
+    expect(languages.requests, ['switchSourceHeader ${inRoot('a.dart')}']);
+    expect(host.calls, contains('openFile ${inRoot('a.h')}'));
+    expect(statusbar.message, isNull);
+
+    languages.onSwitchSourceHeader = (path) => null;
+    host.calls.clear();
+    await run();
+    expect(host.calls.where((c) => c.startsWith('openFile')), isEmpty);
+    expect(
+      statusbar.message,
+      'No source or header counterpart found for this file.',
+    );
+    // Hidden after a while.
+    await tester.pump(const Duration(seconds: 4));
+    expect(statusbar.message, isNull);
   });
 
   testWidgets('problems: counted, stepped through across files, with the '

@@ -2456,6 +2456,18 @@ abstract class AppLocalizations {
   /// **'Go to Symbol in Editor...'**
   String get cmdGotoSymbol;
 
+  /// No description provided for @cmdShowAllSymbols.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Symbol in Workspace...'**
+  String get cmdShowAllSymbols;
+
+  /// No description provided for @cmdSwitchSourceHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch Between Source and Header'**
+  String get cmdSwitchSourceHeader;
+
   /// No description provided for @cmdToggleProblems.
   ///
   /// In en, this message translates to:
@@ -8271,6 +8283,24 @@ abstract class AppLocalizations {
   /// **'No matching editor symbols'**
   String get symbolsNoMatching;
 
+  /// No description provided for @workspaceSymbolsNoServer.
+  ///
+  /// In en, this message translates to:
+  /// **'No running language server can search the workspace\'s symbols.'**
+  String get workspaceSymbolsNoServer;
+
+  /// No description provided for @workspaceSymbolsNoMatching.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching workspace symbols'**
+  String get workspaceSymbolsNoMatching;
+
+  /// No description provided for @switchSourceHeaderNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No source or header counterpart found for this file.'**
+  String get switchSourceHeaderNone;
+
   /// No description provided for @outlineTitle.
   ///
   /// In en, this message translates to:
@@ -8564,6 +8594,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Type the name of a symbol to go to.'**
   String get wbQuickSymbols;
+
+  /// No description provided for @wbQuickWorkspaceSymbols.
+  ///
+  /// In en, this message translates to:
+  /// **'Type the name of a symbol to open.'**
+  String get wbQuickWorkspaceSymbols;
 
   /// No description provided for @wbQuickFiles.
   ///

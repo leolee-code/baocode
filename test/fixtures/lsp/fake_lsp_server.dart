@@ -16,14 +16,22 @@
 //   crashOnInitialize      exits (code 4) instead of answering initialize
 //   stubborn               ignores shutdown, exit, stdin's end and SIGTERM
 //   noRename               answers no prepareRename or rename
+//   symbolsWithoutRange    workspace/symbol answers `WorkspaceSymbol`s whose
+//                          location is a URI alone (`SymbolInformation`s
+//                          otherwise)
 //   tsserverHost           runs `typescript.tsserverRequest`, answering
 //                          `{body: {host, command, args, docs}}`
+//
+// `textDocument/switchSourceHeader` (clangd's) answers the document's URI
+// with `.alt` added, null for a document named `lonely` and an empty string
+// for one named `empty`; `fake/state` tells the URIs asked as `switchQueries`.
 //
 // `fake/tsserver` ({command, args}) asks the client as Vue's server does:
 // a `tsserver/request` notification, answered by a `tsserver/response`.
 //
 // A didChange inserting `CRASH` makes it exit with code 3. Lines holding
-// `ERROR` get an error diagnostic. `fake/state` answers what it knows.
+// `ERROR` get an error diagnostic. A workspace/symbol query holding `SLOW`
+// is answered after two seconds. `fake/state` answers what it knows.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -33,6 +41,8 @@ final _versions = <String, int>{};
 final _notifications = <String>[];
 final _saves = <Map<String, Object?>>[];
 final _watched = <Object?>[];
+final _symbolQueries = <String>[];
+final _switchQueries = <String>[];
 Object? _configuration;
 Map<String, Object?> _options = {};
 Map<String, Object?> _clientCapabilities = {};
@@ -159,6 +169,7 @@ Map<String, Object?> _capabilities() {
     'documentFormattingProvider': true,
     'documentRangeFormattingProvider': true,
     'documentSymbolProvider': true,
+    'workspaceSymbolProvider': true,
     'codeActionProvider': {'resolveProvider': true},
     'executeCommandProvider': {
       'commands': [
@@ -214,6 +225,8 @@ Future<Object?> _answer(String method, Map<String, Object?> params) async {
         'notifications': _notifications,
         'saves': _saves,
         'watched': _watched,
+        'symbolQueries': _symbolQueries,
+        'switchQueries': _switchQueries,
         'configuration': _configuration,
         'initializeParams': _initializeParams,
         'pid': pid,
@@ -375,6 +388,46 @@ Future<Object?> _answer(String method, Map<String, Object?> params) async {
           (symbols.last['children']! as List).add(symbol);
         } else {
           symbols.add(symbol);
+        }
+      }
+      return symbols;
+    case 'textDocument/switchSourceHeader':
+      final uri = params['uri'] as String;
+      _switchQueries.add(uri);
+      if (uri.contains('lonely')) return null;
+      if (uri.contains('empty')) return '';
+      return '$uri.alt';
+    case 'workspace/symbol':
+      final query = params['query'] as String;
+      _symbolQueries.add(query);
+      if (query.contains('SLOW')) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+      final symbols = <Object?>[];
+      for (final MapEntry(key: uri, value: text) in _docs.entries) {
+        final lines = _lines(text);
+        for (var line = 0; line < lines.length; line++) {
+          final match = RegExp(r'^\s*(class|fun) (\w+)')
+              .firstMatch(lines[line]);
+          final name = match?.group(2);
+          if (name == null ||
+              !name.toLowerCase().contains(query.toLowerCase())) {
+            continue;
+          }
+          final at = lines[line].indexOf(name);
+          symbols.add({
+            'name': name,
+            'kind': match!.group(1) == 'class' ? 5 : 12,
+            'containerName': _name,
+            'location': {
+              'uri': uri,
+              if (_options['symbolsWithoutRange'] != true)
+                'range': {
+                  'start': {'line': line, 'character': at},
+                  'end': {'line': line, 'character': at + name.length},
+                },
+            },
+          });
         }
       }
       return symbols;

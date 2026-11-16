@@ -82,6 +82,23 @@ abstract interface class LanguageFeatures implements Listenable {
 
   Future<List<LspDocumentSymbol>> documentSymbols(String path);
 
+  /// Whether some running server can answer [workspaceSymbols].
+  bool get supportsWorkspaceSymbols;
+
+  /// The workspace's symbols matching [query], from every running server
+  /// that searches them, as each matches. Asking again abandons the answer
+  /// still awaited, which completes empty.
+  Future<List<LspWorkspaceSymbol>> workspaceSymbols(String query);
+
+  /// Whether a running clangd serves the document at [path], which can
+  /// then say its counterpart in [switchSourceHeader].
+  bool canSwitchSourceHeader(String path);
+
+  /// clangd's `textDocument/switchSourceHeader`: the path of the source
+  /// file of the header at [path] or the header of the source, null where
+  /// there is none (or no clangd to say).
+  Future<String?> switchSourceHeader(String path);
+
   Future<List<LspCodeAction>> codeActions(
     String path,
     LspRange range, {

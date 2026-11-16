@@ -12,6 +12,9 @@ class FakeWorkbenchHost implements WorkbenchHost {
   IdeSideView shown = IdeSideView.explorer;
   final List<IdeQuickInputModel> models = [];
 
+  /// What [openLocation] was asked for.
+  final List<IdeLocation> locations = [];
+
   @override
   BuildContext? context;
 
@@ -78,6 +81,7 @@ class FakeWorkbenchHost implements WorkbenchHost {
     VoidCallback? afterReveal,
   }) async {
     calls.add('openLocation ${location.path}');
+    locations.add(location);
     afterReveal?.call();
   }
 

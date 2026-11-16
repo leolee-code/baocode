@@ -1,8 +1,9 @@
 // The workspace's language servers as the workbench shows them (upstream's
 // language features with `LanguageStatusService` and the extension
 // recommendations, `FileBasedRecommendations`): the active file's symbols
-// (the outline, the breadcrumbs, Go to Symbol), the servers' edits applied,
-// their missing ones recommended and started once installed.
+// (the outline, the breadcrumbs, Go to Symbol), the workspace's searched
+// (Go to Symbol in Workspace), the servers' edits applied, their missing
+// ones recommended and started once installed.
 
 import 'dart:async';
 
@@ -17,6 +18,7 @@ import '../lsp/language_features.dart';
 import '../lsp/lsp_protocol.dart';
 import '../lsp_ui/document_symbols.dart';
 import '../lsp_ui/lsp_convert.dart';
+import '../lsp_ui/workspace_symbols.dart';
 import '../workbench/contributions.dart';
 
 class LanguageService extends ChangeNotifier {
@@ -45,6 +47,7 @@ class LanguageService extends ChangeNotifier {
   IdeWorkspace? _workspace;
   LanguageFeatures? _languages;
   IdeDocumentSymbols? _symbols;
+  IdeWorkspaceSymbols? _workspaceSymbols;
   StreamSubscription<LspApplyEditRequest>? _editRequests;
 
   /// The servers recommended this session.
@@ -60,12 +63,18 @@ class LanguageService extends ChangeNotifier {
   /// The active file's symbols.
   IdeDocumentSymbols? get symbols => _symbols;
 
+  /// The workspace's symbols matching what is searched for.
+  IdeWorkspaceSymbols? get workspaceSymbols => _workspaceSymbols;
+
   /// Follows [workspace]'s servers.
   void attach(IdeWorkspace workspace) {
     _workspace = workspace;
     final languages = _languages = workspace.languages;
     _symbols = languages == null ? null : IdeDocumentSymbols(languages)
       ?..addListener(notifyListeners);
+    _workspaceSymbols = languages == null
+        ? null
+        : IdeWorkspaceSymbols(languages);
     languages?.addListener(_languagesChanged);
     _editRequests = languages?.workspaceEdits.listen(_applyEditRequest);
   }
@@ -78,6 +87,8 @@ class LanguageService extends ChangeNotifier {
       ?..removeListener(notifyListeners)
       ..dispose();
     _symbols = null;
+    _workspaceSymbols?.dispose();
+    _workspaceSymbols = null;
     _languages = null;
     _workspace = null;
   }
@@ -87,6 +98,7 @@ class LanguageService extends ChangeNotifier {
     recommendServers();
     final symbols = _symbols;
     if (symbols != null && !symbols.loaded) symbols.refresh();
+    _workspaceSymbols?.refresh();
     notifyListeners();
   }
 
@@ -131,6 +143,50 @@ class LanguageService extends ChangeNotifier {
     final path = _workspace?.active?.path;
     if (path == null) return;
     unawaited(host.openLocation(IdeLocation(path, symbol.selectionRange)));
+  }
+
+  /// [symbol]'s file as its row names it: from its workspace folder, the
+  /// whole path of one outside them.
+  String workspaceSymbolFile(LspWorkspaceSymbol symbol) {
+    final workspace = _workspace;
+    final path = lspPathOfUri(symbol.uri, paths: workspace?.paths);
+    if (path == null) return symbol.uri;
+    return workspace != null &&
+            (workspace.isMultiRoot ||
+                workspace.paths.isWithin(workspace.root, path))
+        ? workspace.relativePath(path)
+        : path;
+  }
+
+  /// [symbol] of the workspace shown, its file opened: at the top where
+  /// the server gave no place in it.
+  void openWorkspaceSymbol(LspWorkspaceSymbol symbol) {
+    final location = IdeLocation.of(symbol.location, paths: _workspace?.paths);
+    if (location == null) return;
+    final start = location.range.start;
+    unawaited(
+      host.openLocation(IdeLocation(location.path, LspRange(start, start))),
+    );
+  }
+
+  /// Whether a running clangd serves the active file.
+  bool get canSwitchSourceHeader {
+    final path = _workspace?.active?.path;
+    return path != null && (_languages?.canSwitchSourceHeader(path) ?? false);
+  }
+
+  /// The active file's counterpart (source for a header, header for a
+  /// source) opened, as clangd names it; [none] told where there is none.
+  Future<void> switchSourceHeader({required void Function() none}) async {
+    final languages = _languages;
+    final path = _workspace?.active?.path;
+    if (languages == null || path == null) return;
+    final counterpart = await languages.switchSourceHeader(path);
+    if (counterpart == null) {
+      none();
+      return;
+    }
+    await host.openFile(counterpart, focusEditor: true);
   }
 
   /// Recommends installing the active file's missing language servers,

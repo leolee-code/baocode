@@ -61,6 +61,22 @@ class LanguageContribution extends WorkbenchRegistrations {
           run: (_, _) => problems.go(next: false),
         ),
         WorkbenchAction.catalog(
+          'clangd.switchheadersource',
+          precondition: (_) => language.canSwitchSourceHeader,
+          run: (_, _) => unawaited(
+            language.switchSourceHeader(
+              none: () {
+                final context = language.host.context;
+                if (context == null) return;
+                services.get<StatusbarService>().setMessage(
+                  context.l10n.switchSourceHeaderNone,
+                  hideAfter: const Duration(seconds: 4),
+                );
+              },
+            ),
+          ),
+        ),
+        WorkbenchAction.catalog(
           'workbench.action.problems.focus',
           run: (_, _) => problems.focus(),
         ),

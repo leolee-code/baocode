@@ -111,6 +111,8 @@ String localizedCommandLabel(AppLocalizations l10n, String id, String english) {
     'copyFilePath' => l10n.cmdCopyPathOfActiveFile,
     'copyRelativeFilePath' => l10n.cmdCopyRelativePathOfActiveFile,
     'workbench.action.gotoSymbol' => l10n.cmdGotoSymbol,
+    'workbench.action.showAllSymbols' => l10n.cmdShowAllSymbols,
+    'clangd.switchheadersource' => l10n.cmdSwitchSourceHeader,
     'workbench.actions.view.problems' => l10n.cmdToggleProblems,
     'outline.focus' => l10n.cmdShowOutline,
     'editor.action.marker.nextInFiles' => l10n.cmdNextProblemInFiles,

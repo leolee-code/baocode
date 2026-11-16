@@ -9,7 +9,8 @@
 // Open Next/Previous Recently Used Editor), and the quick accesses of
 // src/vs/workbench/contrib/search/browser/anythingQuickAccess.ts (files),
 // commandsQuickAccess.ts (`>`), gotoLineQuickAccess.ts (`:`),
-// gotoSymbolQuickAccess.ts (`@`) and editorQuickAccess.ts (`edt `).
+// gotoSymbolQuickAccess.ts (`@`), symbolsQuickAccess.ts (`#`) and
+// editorQuickAccess.ts (`edt `).
 //
 // Deviations:
 // - Accepting a file in the background opens it where the text says, but
@@ -28,6 +29,7 @@ import '../../file_service.dart' show IdeHostFiles;
 import '../../ide_workspace.dart';
 import '../../lsp/lsp_protocol.dart';
 import '../../lsp_ui/document_symbols.dart';
+import '../../lsp_ui/workspace_symbols.dart';
 import '../../services/commands.dart';
 import '../../services/editors.dart';
 import '../../services/explorer.dart';
@@ -121,6 +123,7 @@ class QuickInputContribution extends WorkbenchRegistrations {
           precondition: (_) => workspace()?.active != null,
           run: (_, _) => quick.show('@'),
         ),
+        showWith('workbench.action.showAllSymbols', '#'),
         focus('quickInput.next', IdeQuickPickFocus.next),
         focus('quickInput.previous', IdeQuickPickFocus.previous),
         focus('quickInput.first', IdeQuickPickFocus.first),
@@ -217,6 +220,7 @@ class QuickInputContribution extends WorkbenchRegistrations {
     add(registry.register(_commands(services)));
     add(registry.register(_gotoLine(services, editors)));
     add(registry.register(_symbols(services)));
+    add(registry.register(workspaceSymbols(services)));
     for (final prefix in const [
       editorsByAppearancePrefix,
       editorsInGroupPrefix,
@@ -327,6 +331,31 @@ class QuickInputContribution extends WorkbenchRegistrations {
           loaded: symbols?.loaded ?? true,
           supported: symbols != null && active != null && symbols.supported,
           onGo: language.revealSymbol,
+          l10n: context.l10n,
+        );
+      },
+    );
+  }
+
+  /// `#`: a symbol of the workspace, as its language servers find them.
+  @visibleForTesting
+  static QuickAccessProvider workspaceSymbols(WorkbenchServices services) {
+    final language = services.get<LanguageService>();
+    return QuickAccessProvider(
+      prefix: '#',
+      placeholder: (l10n) => l10n.wbQuickWorkspaceSymbols,
+      refresh: () => language.workspaceSymbols,
+      // Asked again each time it opens: the files may have changed.
+      onShow: () => language.workspaceSymbols?.clear(),
+      picks: (context, filter) {
+        final symbols = language.workspaceSymbols?..search(filter);
+        return workspaceSymbolQuickPicks(
+          filter,
+          symbols: symbols?.symbols ?? const [],
+          loading: symbols?.loading ?? false,
+          supported: symbols?.supported ?? false,
+          fileOf: language.workspaceSymbolFile,
+          onGo: language.openWorkspaceSymbol,
           l10n: context.l10n,
         );
       },

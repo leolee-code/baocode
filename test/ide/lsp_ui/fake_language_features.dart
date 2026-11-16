@@ -51,6 +51,14 @@ class FakeLanguageFeatures extends ChangeNotifier implements LanguageFeatures {
   onRename;
   List<LspTextEdit> Function(String path, LspRange? range)? onFormat;
   List<LspDocumentSymbol> Function(String path)? onDocumentSymbols;
+
+  /// What [supportsWorkspaceSymbols] answers.
+  bool workspaceSymbolsSupported = true;
+  FutureOr<List<LspWorkspaceSymbol>> Function(String query)? onWorkspaceSymbols;
+
+  /// What [canSwitchSourceHeader] answers for every document.
+  bool clangdServes = false;
+  FutureOr<String?> Function(String path)? onSwitchSourceHeader;
   List<LspCodeAction> Function(
     String path,
     LspRange range,
@@ -218,6 +226,24 @@ class FakeLanguageFeatures extends ChangeNotifier implements LanguageFeatures {
   Future<List<LspDocumentSymbol>> documentSymbols(String path) async {
     _record('documentSymbols', path);
     return onDocumentSymbols?.call(path) ?? const [];
+  }
+
+  @override
+  bool get supportsWorkspaceSymbols => workspaceSymbolsSupported;
+
+  @override
+  Future<List<LspWorkspaceSymbol>> workspaceSymbols(String query) async {
+    _record('workspaceSymbols', query);
+    return await onWorkspaceSymbols?.call(query) ?? const [];
+  }
+
+  @override
+  bool canSwitchSourceHeader(String path) => clangdServes;
+
+  @override
+  Future<String?> switchSourceHeader(String path) async {
+    _record('switchSourceHeader', path);
+    return onSwitchSourceHeader?.call(path);
   }
 
   @override

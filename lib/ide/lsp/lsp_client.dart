@@ -205,6 +205,12 @@ class LspClient {
       'executeCommand': {'dynamicRegistration': true},
       'configuration': true,
       'workspaceFolders': true,
+      'symbol': {
+        'dynamicRegistration': true,
+        'symbolKind': {
+          'valueSet': [for (var i = 1; i <= 26; i++) i],
+        },
+      },
       'semanticTokens': {'refreshSupport': true},
     },
     'textDocument': {
@@ -640,6 +646,24 @@ class LspClient {
         for (final c in registration.options['commands']! as List)
           if (c is String) c,
   };
+
+  /// Whether the server answers `workspace/symbol` (statically, or by a
+  /// registration).
+  bool get supportsWorkspaceSymbols {
+    final value = _capabilities['workspaceSymbolProvider'];
+    return value == true ||
+        value is Map ||
+        _registrations.values.any((r) => r.method == 'workspace/symbol');
+  }
+
+  /// `workspace/symbol`: the workspace's symbols matching [query], as the
+  /// server matches them.
+  Future<List<LspWorkspaceSymbol>> workspaceSymbols(
+    String query, {
+    JsonRpcCancelToken? cancel,
+  }) async => LspWorkspaceSymbol.listFromJson(
+    await request('workspace/symbol', {'query': query}, cancel: cancel),
+  );
 
   /// What the server registered to hear about through
   /// `workspace/didChangeWatchedFiles`.

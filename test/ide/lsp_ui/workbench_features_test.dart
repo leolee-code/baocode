@@ -131,6 +131,55 @@ void main() {
     );
   });
 
+  testWidgets('Go to Symbol in Workspace (#) asks the servers and opens the '
+      'pick\'s file', (tester) async {
+    const b = 'lib/b.dart';
+    const other = '// b\nvoid helper() {}\n';
+    final languages = FakeLanguageFeatures()
+      ..onWorkspaceSymbols = (query) => [
+        LspWorkspaceSymbol(
+          name: 'helper',
+          kind: LspSymbolKind.function,
+          uri: Uri.file(inRoot(b)).toString(),
+          range: lspRange(1, 5, 11),
+          containerName: 'Tools',
+        ),
+      ];
+    final workspace = await pumpLanguageWorkbench(
+      tester,
+      {_a: _source, b: other},
+      languages,
+      open: [_a],
+    );
+    await settle(tester);
+
+    runCommand(tester, 'workbench.action.showAllSymbols');
+    await settle(tester);
+    final field = find.descendant(
+      of: find.byType(IdeQuickInput),
+      matching: find.byType(TextField),
+    );
+    expect(tester.widget<TextField>(field).controller!.text, '#');
+    await tester.enterText(field, '#help');
+    await settle(tester, const Duration(milliseconds: 200));
+    expect(languages.requests, contains('workspaceSymbols help'));
+    expect(
+      find.descendant(
+        of: find.byType(IdeQuickInput),
+        matching: find.textContaining('Tools • lib/b.dart'),
+      ),
+      findsOneWidget,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await settle(tester);
+    expect(find.byType(IdeQuickInput), findsNothing);
+    expect(workspace.active?.path, inRoot(b));
+    expect(
+      surfaceController(tester).value.selection.extentOffset,
+      other.indexOf('helper'),
+    );
+  });
+
   testWidgets('semantic tokens restyle the painted spans in the theme', (
     tester,
   ) async {
@@ -420,6 +469,10 @@ void main() {
     expect(
       commands['workbench.action.gotoSymbol']!.shortcutLabel(),
       'Ctrl+Shift+O',
+    );
+    expect(
+      commands['workbench.action.showAllSymbols']!.shortcutLabel(),
+      'Ctrl+T',
     );
     expect(
       commands['workbench.actions.view.problems']!.shortcutLabel(),

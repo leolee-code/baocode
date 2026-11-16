@@ -1243,6 +1243,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cmdGotoSymbol => 'Go to Symbol in Editor...';
 
   @override
+  String get cmdShowAllSymbols => 'Go to Symbol in Workspace...';
+
+  @override
+  String get cmdSwitchSourceHeader => 'Switch Between Source and Header';
+
+  @override
   String get cmdToggleProblems => 'Toggle Problems';
 
   @override
@@ -5082,6 +5088,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get symbolsNoMatching => 'No matching editor symbols';
 
   @override
+  String get workspaceSymbolsNoServer =>
+      'No running language server can search the workspace\'s symbols.';
+
+  @override
+  String get workspaceSymbolsNoMatching => 'No matching workspace symbols';
+
+  @override
+  String get switchSourceHeaderNone =>
+      'No source or header counterpart found for this file.';
+
+  @override
   String get outlineTitle => 'OUTLINE';
 
   @override
@@ -5265,6 +5282,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wbQuickSymbols => 'Type the name of a symbol to go to.';
+
+  @override
+  String get wbQuickWorkspaceSymbols => 'Type the name of a symbol to open.';
 
   @override
   String get wbQuickFiles =>

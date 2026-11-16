@@ -1210,6 +1210,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cmdGotoSymbol => '转到编辑器中的符号...';
 
   @override
+  String get cmdShowAllSymbols => '转到工作区中的符号...';
+
+  @override
+  String get cmdSwitchSourceHeader => '在源文件和头文件之间切换';
+
+  @override
   String get cmdToggleProblems => '切换问题';
 
   @override
@@ -4759,6 +4765,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get symbolsNoMatching => '没有匹配的编辑器符号';
 
   @override
+  String get workspaceSymbolsNoServer => '没有正在运行的语言服务器可以搜索工作区中的符号。';
+
+  @override
+  String get workspaceSymbolsNoMatching => '没有匹配的工作区符号';
+
+  @override
+  String get switchSourceHeaderNone => '找不到此文件对应的源文件或头文件。';
+
+  @override
   String get outlineTitle => '大纲';
 
   @override
@@ -4924,6 +4939,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get wbQuickSymbols => '键入要转到的符号的名称。';
+
+  @override
+  String get wbQuickWorkspaceSymbols => '键入要打开的符号的名称。';
 
   @override
   String get wbQuickFiles => '按名称搜索文件(追加 : 转到行，追加 > 运行命令)';

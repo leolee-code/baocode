@@ -1532,6 +1532,81 @@ class LspManager extends ChangeNotifier
     return LspDocumentSymbol.listFromJson(answer?.$2);
   }
 
+  /// The running clangd serving [doc], if any.
+  LspClient? _clangdFor(_Document doc) {
+    for (final server in doc.servers) {
+      final client = server.client;
+      if (server.state == LanguageServerState.running &&
+          client != null &&
+          (server.id == 'clangd' || server.definition.command == 'clangd')) {
+        return client;
+      }
+    }
+    return null;
+  }
+
+  @override
+  bool canSwitchSourceHeader(String path) {
+    final doc = _documents[_normalize(path)];
+    return doc != null && _clangdFor(doc) != null;
+  }
+
+  @override
+  Future<String?> switchSourceHeader(String path) async {
+    final doc = _documents[_normalize(path)];
+    final client = doc == null ? null : _clangdFor(doc);
+    if (doc == null || client == null) return null;
+    final answer = await _ask(client, 'textDocument/switchSourceHeader', {
+      'uri': doc.uri,
+    });
+    return answer is String && answer.isNotEmpty ? _pathOf(answer) : null;
+  }
+
+  /// The running clients that search the workspace's symbols, in the order
+  /// their servers were first wanted. Not those kept from a file's symbols.
+  Iterable<LspClient> get _symbolSearchers sync* {
+    for (final server in _servers.values) {
+      final client = server.client;
+      if (server.state == LanguageServerState.running &&
+          client != null &&
+          server.definition.provides(LspFeature.documentSymbols) &&
+          client.supportsWorkspaceSymbols) {
+        yield client;
+      }
+    }
+  }
+
+  /// Abandons the `workspace/symbol` requests under way.
+  JsonRpcCancelToken? _symbolSearch;
+
+  @override
+  bool get supportsWorkspaceSymbols => _symbolSearchers.isNotEmpty;
+
+  @override
+  Future<List<LspWorkspaceSymbol>> workspaceSymbols(String query) async {
+    _symbolSearch?.cancel();
+    final cancel = _symbolSearch = JsonRpcCancelToken();
+    final answers = await Future.wait([
+      for (final client in _symbolSearchers)
+        client
+            .workspaceSymbols(query, cancel: cancel)
+            // An error, a timeout or a crash: no answer from this server.
+            .catchError((Object _) => const <LspWorkspaceSymbol>[]),
+    ]);
+    if (identical(_symbolSearch, cancel)) _symbolSearch = null;
+    if (cancel.isCancelled) return const [];
+    final seen = <String>{};
+    return [
+      for (final symbols in answers)
+        for (final symbol in symbols)
+          if (seen.add(
+            '${symbol.name}|${symbol.kind.index}|'
+            '${_pathOf(symbol.uri) ?? symbol.uri}|${symbol.range}',
+          ))
+            symbol,
+    ];
+  }
+
   @override
   Future<List<LspCodeAction>> codeActions(
     String path,

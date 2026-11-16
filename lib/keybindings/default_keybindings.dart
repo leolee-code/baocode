@@ -379,6 +379,14 @@ final Map<String, CommandInfo> commandCatalog = {
       'Go to Symbol in Editor...',
     ),
     const CommandInfo(
+      'workbench.action.showAllSymbols',
+      'Go to Symbol in Workspace...',
+    ),
+    const CommandInfo(
+      'clangd.switchheadersource',
+      'Switch Between Source and Header',
+    ),
+    const CommandInfo(
       'workbench.actions.view.problems',
       'Toggle Problems',
       category: 'View',
@@ -701,6 +709,18 @@ final List<KeybindingEntry> defaultKeybindings = List.unmodifiable([
     key: 'ctrl+shift+o',
     mac: 'shift+cmd+o',
     command: 'workbench.action.gotoSymbol',
+  ),
+  const KeybindingEntry(
+    key: 'ctrl+t',
+    mac: 'cmd+t',
+    command: 'workbench.action.showAllSymbols',
+  ),
+  // clangd's Alt+O, in an editor only: elsewhere it types what the keyboard
+  // has there.
+  const KeybindingEntry(
+    key: 'alt+o',
+    command: 'clangd.switchheadersource',
+    when: 'editorTextFocus',
   ),
   const KeybindingEntry(
     key: 'ctrl+shift+m',

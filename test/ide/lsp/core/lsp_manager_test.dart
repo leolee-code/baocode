@@ -641,6 +641,118 @@ void main() {
     ], containsAll(['a:Add header (a)', 'b:Add header (b)']));
   });
 
+  test('workspace symbols: asked of the servers that search them, either '
+      'answer merged', () async {
+    final lsp = manager([
+      fakeServer('info'),
+      fakeServer('bare', options: {'symbolsWithoutRange': true}),
+      fakeServer(
+        'none',
+        options: {
+          'capabilities': {'workspaceSymbolProvider': null},
+        },
+      ),
+      fakeServer('same'),
+      fakeServer('format', onlyFeatures: {LspFeature.format}),
+    ]);
+    LspRange at(int line, int start, int end) =>
+        LspRange(LspPosition(line, start), LspPosition(line, end));
+    expect(lsp.supportsWorkspaceSymbols, isFalse);
+    expect(await lsp.workspaceSymbols('foo'), isEmpty);
+    final (_, doc) = await open(lsp, 'a.fake', 'class Foo\n  fun food\nbar\n');
+    final path = doc.path;
+    for (var i = 0; i < 5; i++) {
+      await running(lsp, path, i);
+    }
+    expect(lsp.supportsWorkspaceSymbols, isTrue);
+
+    final symbols = await lsp.workspaceSymbols('foo');
+    expect(
+      [
+        for (final s in symbols)
+          (s.name, s.kind, s.containerName, s.uri, s.range),
+      ],
+      [
+        // `SymbolInformation`s; those `same` found too are told once.
+        ('Foo', LspSymbolKind.klass, 'info', uri(path), at(0, 6, 9)),
+        ('food', LspSymbolKind.function, 'info', uri(path), at(1, 6, 10)),
+        // `WorkspaceSymbol`s with a document alone: its top.
+        ('Foo', LspSymbolKind.klass, 'bare', uri(path), null),
+        ('food', LspSymbolKind.function, 'bare', uri(path), null),
+      ],
+    );
+    expect(symbols.last.location.range, at(0, 0, 0));
+    expect(await lsp.workspaceSymbols('nothing'), isEmpty);
+
+    Future<Object?> asked(String id) async =>
+        (await state(lsp, id, path))['symbolQueries'];
+    expect(await asked('info'), ['foo', 'nothing']);
+    expect(await asked('same'), ['foo', 'nothing']);
+    expect(await asked('none'), isEmpty);
+    expect(await asked('format'), isEmpty);
+    final capabilities =
+        (await state(lsp, 'info', path))['initializeParams']! as Map;
+    expect(
+      ((capabilities['capabilities'] as Map)['workspace'] as Map)['symbol'],
+      {
+        'dynamicRegistration': true,
+        'symbolKind': {
+          'valueSet': [for (var i = 1; i <= 26; i++) i],
+        },
+      },
+    );
+  });
+
+  test(
+    'switch source/header: only clangd is asked, for its document',
+    () async {
+      final lsp = manager([fakeServer('clangd'), fakeServer('other')]);
+      expect(lsp.canSwitchSourceHeader(p.join(root, 'a.fake')), isFalse);
+      final (_, doc) = await open(lsp, 'a.fake', 'class Foo\n');
+      final path = doc.path;
+      expect(
+        lsp.canSwitchSourceHeader(path),
+        isFalse,
+        reason: 'not running yet',
+      );
+      await running(lsp, path, 0);
+      await running(lsp, path, 1);
+      expect(lsp.canSwitchSourceHeader(path), isTrue);
+      expect(lsp.canSwitchSourceHeader(p.join(root, 'b.fake')), isFalse);
+
+      expect(await lsp.switchSourceHeader(path), '$path.alt');
+      for (final name in ['lonely.fake', 'empty.fake']) {
+        final (_, other) = await open(lsp, name, 'x\n');
+        await running(lsp, other.path, 0);
+        expect(await lsp.switchSourceHeader(other.path), isNull, reason: name);
+      }
+      expect(await lsp.switchSourceHeader(p.join(root, 'b.fake')), isNull);
+
+      expect((await state(lsp, 'clangd', path))['switchQueries'], [
+        uri(path),
+        uri(p.join(root, 'lonely.fake')),
+        uri(p.join(root, 'empty.fake')),
+      ]);
+      expect((await state(lsp, 'other', path))['switchQueries'], isEmpty);
+    },
+  );
+
+  test('workspace symbols: a later query abandons the one awaited', () async {
+    final lsp = manager([fakeServer('fake')]);
+    final (_, doc) = await open(lsp, 'a.fake', 'class SLOW\nclass Foo\n');
+    await running(lsp, doc.path);
+    final stale = lsp.workspaceSymbols('SLOW');
+    final latest = lsp.workspaceSymbols('foo');
+    // Without its answer, which the server was told not to give.
+    expect(await stale, isEmpty);
+    expect((await latest).map((s) => s.name), ['Foo']);
+    final server = await state(lsp, 'fake', doc.path);
+    expect(server['symbolQueries'], ['SLOW', 'foo']);
+    expect(server['notifications'], contains(r'$/cancelRequest'));
+    // One left alone is answered.
+    expect((await lsp.workspaceSymbols('SLOW')).map((s) => s.name), ['SLOW']);
+  });
+
   test('rename: the first server in order that renames there', () async {
     final lsp = manager([
       fakeServer('a', options: {'noRename': true}),

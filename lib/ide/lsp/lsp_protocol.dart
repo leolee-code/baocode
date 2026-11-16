@@ -637,6 +637,55 @@ class LspDocumentSymbol {
   final List<LspDocumentSymbol> children;
 }
 
+/// A symbol of the workspace's, as `workspace/symbol` answers: a
+/// `SymbolInformation`, or a `WorkspaceSymbol`, whose location may be its
+/// document alone.
+class LspWorkspaceSymbol {
+  const LspWorkspaceSymbol({
+    required this.name,
+    required this.kind,
+    required this.uri,
+    this.range,
+    this.containerName,
+  });
+
+  /// `SymbolInformation[] | WorkspaceSymbol[] | null`; those without a
+  /// document are left out.
+  static List<LspWorkspaceSymbol> listFromJson(Object? json) => [
+    for (final item in _maps(json))
+      if (_map(item['location']) case final location?)
+        if (_string(location['uri']) case final uri? when uri.isNotEmpty)
+          LspWorkspaceSymbol(
+            name: _string(item['name']) ?? '',
+            kind: LspSymbolKind.of(item['kind']),
+            uri: uri,
+            range: switch (_map(location['range'])) {
+              final range? => LspRange.fromJson(range),
+              null => null,
+            },
+            containerName: _string(item['containerName']),
+          ),
+  ];
+
+  final String name;
+  final LspSymbolKind kind;
+
+  /// What it is declared in (a class, a namespace), if the server says.
+  final String? containerName;
+
+  /// Its document.
+  final String uri;
+
+  /// Where it is in [uri]; null when the server left it to a resolve.
+  final LspRange? range;
+
+  /// Where to go for it: the top of its document without a [range].
+  LspLocation get location => LspLocation(
+    uri,
+    range ?? const LspRange(LspPosition(0, 0), LspPosition(0, 0)),
+  );
+}
+
 class LspCodeAction {
   const LspCodeAction({
     required this.title,
