@@ -2457,6 +2457,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get imageDefaultSet => '已设为默认图片模型';
 
   @override
+  String get imageCopyPrompt => '复制提示词';
+
+  @override
   String get toolProposingGoal => '正在提议目标';
 
   @override
