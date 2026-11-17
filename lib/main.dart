@@ -89,6 +89,7 @@ import 'remote/ssh_host.dart';
 import 'search/claude_conversation_search.dart';
 import 'search/conversation_search.dart';
 import 'settings/app_locale.dart';
+import 'platform/windows_shell.dart';
 import 'settings/app_settings.dart';
 import 'settings/data_dir_startup.dart';
 import 'settings/user_settings.dart';
@@ -359,6 +360,8 @@ Future<void> main(List<String> arguments) async {
       claudeStatus: localClaudeStatus,
       customizations: customizations,
     );
+    // The shell agents run commands in, as Settings picks it (Windows).
+    WindowsShells.current = settings.shells;
   }
   // The theme extensions (lib/extensions/): color and file icon themes
   // from Open VSX or a .vsix, `workbench.iconTheme` followed as

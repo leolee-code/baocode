@@ -6,6 +6,7 @@ import 'package:bao_agent/bao_agent.dart';
 import '../../models/launch_environment.dart';
 import '../../network/network_proxy_io.dart';
 import '../../network/tls.dart';
+import '../../platform/windows_shell.dart';
 import 'claude_code_transport.dart';
 import 'claude_environment.dart';
 import 'core_ripgrep_io.dart';
@@ -62,6 +63,9 @@ class DartCoreTransport implements ClaudeCodeTransport {
       ..addAll(ClaudeLaunch.environment)
       ..addAll(ClaudeEnvironment.stateDirectory(base));
     await CoreRipgrep.addTo(environment);
+    // Its commands run in the shell Settings → General → Command Line
+    // picks (Windows), where one is picked.
+    environment.addAll(WindowsShells.coreEnvironment());
     final instructions = launch.instructions;
     return EngineOptions(
       cwd: launch.cwd,

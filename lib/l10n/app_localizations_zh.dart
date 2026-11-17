@@ -13595,4 +13595,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String remoteBrowserReplace(String name) {
     return '“$name”已存在，要替换它吗？';
   }
+
+  @override
+  String get commandLineShell => '运行命令的 Shell';
+
+  @override
+  String get commandLineShellDescription =>
+      '智能体在 Windows 上用它运行命令，不会下载任何东西。Claude Code CLI 内核只能用 bash：选了 cmd 或 PowerShell 时，它仍用 Git Bash。';
+
+  @override
+  String get commandLineShellCustom => '自定义…';
+
+  @override
+  String commandLineShellInUse(String path) {
+    return '正在使用：$path';
+  }
+
+  @override
+  String commandLineShellFallback(String shell, String path) {
+    return '$shell 还不能用，命令暂时用 $path 运行。';
+  }
+
+  @override
+  String get commandLineCustomPath => '自定义 Shell';
+
+  @override
+  String get commandLineCustomPathDescription =>
+      '运行命令的程序：bash.exe、cmd.exe、powershell.exe 或 pwsh.exe。';
 }

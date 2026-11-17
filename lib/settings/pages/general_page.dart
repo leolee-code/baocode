@@ -19,6 +19,7 @@ import '../../l10n/l10n.dart';
 import '../../platform/app_platform.dart';
 import '../../platform/context_menu.dart';
 import '../../platform/shell_command.dart';
+import '../../platform/windows_shell.dart';
 import '../../theme/workbench_theme.dart' show themeColors;
 import '../../tips/feature_tips_controller.dart';
 import '../../tips/feature_tips_view.dart';
@@ -27,6 +28,7 @@ import '../../workspace/main_window.dart';
 import '../../workspace/session_tools.dart';
 import '../shell_command_actions.dart';
 import '../user_settings.dart';
+import 'command_line_settings.dart';
 import 'settings_dropdown.dart';
 import 'settings_widgets.dart';
 
@@ -39,8 +41,9 @@ import 'settings_widgets.dart';
 /// (`chat.promptSuggestions`), whether the composer has its Polish button
 /// (`chat.composer.polish`), whether the turn under way shows its time,
 /// speed and tokens (`chat.liveTurnStats`), the Claude Code to run
-/// (`claudeCode.path`), BaoCode Bash on Windows, the `code` shell command, and Open with BaoCode in Finder's or
-/// Explorer's context menu. A choice is written at once; the default is not
+/// (`claudeCode.path`), the shell agents run commands in on Windows
+/// (`commandLine.shell`), the `code` shell command, and Open with BaoCode in
+/// Finder's or Explorer's context menu. A choice is written at once; the default is not
 /// written.
 class GeneralSettingsPage extends StatelessWidget {
   const GeneralSettingsPage({
@@ -48,6 +51,7 @@ class GeneralSettingsPage extends StatelessWidget {
     this.settings,
     this.tips,
     this.claudeStatus,
+    this.shells,
   });
 
   /// settings.json; none under test, where choices are not kept.
@@ -59,6 +63,9 @@ class GeneralSettingsPage extends StatelessWidget {
 
   /// The feature tips: those not on yet are listed first.
   final FeatureTipsController? tips;
+
+  /// The pick of the shell agents run commands in; none but on Windows.
+  final WindowsShells? shells;
 
   static String attributionName(BuildContext context, CommitAttribution value) {
     final l10n = context.l10n;
@@ -437,6 +444,11 @@ class GeneralSettingsPage extends StatelessWidget {
                     ],
                   ),
                 ],
+              ),
+            if (shells case final shells?)
+              SettingsGroup(
+                title: l10n.generalSettingsCommandLine,
+                children: [CommandLineSettings(shells: shells)],
               ),
             SettingsGroup(
               title: l10n.generalSettingsWindows,

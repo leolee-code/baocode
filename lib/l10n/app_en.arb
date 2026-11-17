@@ -9057,5 +9057,14 @@
   "remoteBrowserSaveName": "Save As:",
   "remoteBrowserSave": "Save",
   "remoteBrowserReplace": "“{name}” already exists. Replace it?",
-  "@remoteBrowserReplace": {"placeholders": {"name": {"type": "String"}}}
+  "@remoteBrowserReplace": {"placeholders": {"name": {"type": "String"}}},
+  "commandLineShell": "Shell",
+  "commandLineShellDescription": "What agents run their commands in on Windows; nothing is downloaded. Claude Code's CLI core takes bash alone: with cmd or PowerShell picked, it runs Git Bash.",
+  "commandLineShellCustom": "Custom…",
+  "commandLineShellInUse": "In use: {path}",
+  "@commandLineShellInUse": {"placeholders": {"path": {"type": "String"}}},
+  "commandLineShellFallback": "{shell} is not ready yet: commands run in {path} meanwhile.",
+  "@commandLineShellFallback": {"placeholders": {"shell": {"type": "String"}, "path": {"type": "String"}}},
+  "commandLineCustomPath": "Custom shell",
+  "commandLineCustomPathDescription": "The program to run commands with: a bash.exe, cmd.exe, powershell.exe or pwsh.exe."
 }

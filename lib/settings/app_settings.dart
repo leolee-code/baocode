@@ -13,6 +13,7 @@ import '../keybindings/keymap.dart';
 import '../keybindings/vscode_import.dart';
 import '../l10n/l10n.dart';
 import '../models/model_providers.dart';
+import '../platform/windows_shell.dart';
 import '../stash/stash_controller.dart';
 import '../theme/workbench_theme.dart' show WorkbenchThemeService;
 import '../tips/builtin_tips.dart';
@@ -95,6 +96,16 @@ class AppSettings {
     null => null,
   };
 
+  /// The pick of the shell agents run commands in, where it is offered
+  /// (Windows, with settings files); main() makes it the app's
+  /// ([WindowsShells.current]).
+  late final WindowsShells? shells = switch (files) {
+    final files? => WindowsShells.forPlatform(
+      settings: _ShellSettings(files.settings),
+    ),
+    null => null,
+  };
+
   /// Writes the keyboard page's changes into keybindings.json: one for
   /// the app, so they are made one at a time.
   late final KeybindingsEditingService editing = KeybindingsEditingService(
@@ -114,8 +125,8 @@ class AppSettings {
     ];
   }
 
-  /// What the settings dialog says above every page: BaoCode Bash
-  /// recommended, on Windows; the browser's debugging history grown large.
+  /// What the settings dialog says above every page: the browser's
+  /// debugging history grown large.
   Widget buildNotice(
     BuildContext context,
     void Function(SettingsSection section) open,
@@ -133,6 +144,7 @@ class AppSettings {
           settings: files?.settings,
           tips: tips,
           claudeStatus: claudeStatus,
+          shells: shells,
         );
       case SettingsSection.appearance:
         final themes = WorkbenchThemeService.instance;
@@ -233,6 +245,26 @@ class AppSettings {
       selectKeymap: (id) => sync?.selectKeymap(id),
     ).whenComplete(refreshKeymaps);
   }
+}
+
+/// The pick of the shell, in settings.json.
+class _ShellSettings implements ShellSettings {
+  _ShellSettings(this.settings);
+
+  final UserSettings settings;
+
+  @override
+  Object? operator [](String key) => settings[key];
+
+  @override
+  Future<void> update(String key, Object? value) => settings.update(key, value);
+
+  @override
+  void addListener(VoidCallback listener) => settings.addListener(listener);
+
+  @override
+  void removeListener(VoidCallback listener) =>
+      settings.removeListener(listener);
 }
 
 /// The app's global storage, as the tips remember themselves in it.

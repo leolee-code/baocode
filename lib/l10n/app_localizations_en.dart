@@ -14408,4 +14408,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String remoteBrowserReplace(String name) {
     return '“$name” already exists. Replace it?';
   }
+
+  @override
+  String get commandLineShell => 'Shell';
+
+  @override
+  String get commandLineShellDescription =>
+      'What agents run their commands in on Windows; nothing is downloaded. Claude Code\'s CLI core takes bash alone: with cmd or PowerShell picked, it runs Git Bash.';
+
+  @override
+  String get commandLineShellCustom => 'Custom…';
+
+  @override
+  String commandLineShellInUse(String path) {
+    return 'In use: $path';
+  }
+
+  @override
+  String commandLineShellFallback(String shell, String path) {
+    return '$shell is not ready yet: commands run in $path meanwhile.';
+  }
+
+  @override
+  String get commandLineCustomPath => 'Custom shell';
+
+  @override
+  String get commandLineCustomPathDescription =>
+      'The program to run commands with: a bash.exe, cmd.exe, powershell.exe or pwsh.exe.';
 }

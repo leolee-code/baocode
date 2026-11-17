@@ -8,6 +8,7 @@ import '../../models/launch_environment.dart';
 import '../../network/network_proxy_io.dart';
 import '../../network/tls.dart';
 import '../../platform/data_dir.dart';
+import '../../platform/windows_shell.dart';
 import '../../platform/child_process_registry.dart';
 import 'claude_code_transport.dart';
 import 'claude_environment.dart';
@@ -123,6 +124,9 @@ class ProcessTransport implements ClaudeCodeTransport {
           ...cli.environment,
           ...proxy,
           ...certificates,
+          // Its commands run in the shell Settings → General → Command
+          // Line picks, where that is a bash (Windows).
+          ...WindowsShells.cliEnvironment(),
           // A provider's session: none of the user's own model setup.
           if (launch.env != null)
             for (final name in ClaudeModelVariables.inherited) name: '',
