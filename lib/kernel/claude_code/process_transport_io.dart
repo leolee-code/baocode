@@ -95,10 +95,20 @@ class ProcessTransport implements ClaudeCodeTransport {
     final settingsFile = launch.hasSecrets
         ? await ClaudeSettingsFile.write(launch.settings)
         : null;
-    final started = switch (settingsFile) {
-      final path? => launch.withSettingsFile(path),
-      null => launch,
-    };
+    // The prompt in a file too: a long one can be longer than a command
+    // line Windows starts.
+    final promptFile = launch.systemPrompt.isEmpty
+        ? null
+        : await ClaudeSettingsFile.writePrompt(launch.systemPrompt);
+    final started = launch.copyWith(
+      settingsPath: settingsFile,
+      promptPath: promptFile,
+    );
+    Future<void> deleteFiles() async {
+      if (settingsFile != null) await ClaudeSettingsFile.delete(settingsFile);
+      if (promptFile != null) await ClaudeSettingsFile.delete(promptFile);
+    }
+
     // The proxy as it is now: Clash may have been turned on since.
     final proxy = await NetworkProxy.instance.environment();
     // The machine's own certificates, as the app's requests trust them:
@@ -126,15 +136,11 @@ class ProcessTransport implements ClaudeCodeTransport {
         // An npm shim is a `.cmd`, which only the shell can run.
         runInShell: cli.throughShell,
       );
-      if (settingsFile != null) {
-        // Read as it starts; gone with it.
-        unawaited(
-          process.exitCode.then((_) => ClaudeSettingsFile.delete(settingsFile)),
-        );
-      }
+      // Read as it starts; gone with it.
+      unawaited(process.exitCode.then((_) => deleteFiles()));
       return ProcessTransport._(process, executable: cli.executable);
     } on ProcessException catch (error) {
-      if (settingsFile != null) await ClaudeSettingsFile.delete(settingsFile);
+      await deleteFiles();
       // Which file: Windows' own words for it leave `%1` in its place.
       throw ClaudeUnavailable(
         'Claude Code could not start',
