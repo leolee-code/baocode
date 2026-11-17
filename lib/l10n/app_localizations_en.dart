@@ -6971,7 +6971,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quotaBarThisChat => 'This chat';
 
   @override
-  String get quotaBarRefresh => 'Check Quota Again';
+  String get quotaBarRefresh => 'Refresh Quota Data';
 
   @override
   String modelsQuotaResetsIn(String time) {
