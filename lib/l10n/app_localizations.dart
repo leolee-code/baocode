@@ -23056,7 +23056,7 @@ abstract class AppLocalizations {
   /// No description provided for @remoteBrowserRecent.
   ///
   /// In en, this message translates to:
-  /// **'Recent'**
+  /// **'Recent Locations'**
   String get remoteBrowserRecent;
 
   /// No description provided for @remoteBrowserHome.
