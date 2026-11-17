@@ -94,6 +94,17 @@
 3. 上游新增的功能，逐个看它是否联网、连到哪里、发什么。连 `baocode.dev` 的删掉；让内容经第三方中转的删掉；其余的按规则 4 登记。
 4. 测试的白名单有任何改动，都要在 PR 描述里单独列出并说明原因。
 
+## 待评审的白名单条目
+
+合并上游 2.0.1（分支 `merge/upstream-2.0.1`）后，`test/policy` 报出下面两条。两条都**没有新增外联对象**，说明写在这里，评审通过后再加进 `test/policy/egress_policy_test.dart` 的白名单：
+
+| 条目 | 来自 | 实际做什么 | 连到哪里 |
+| --- | --- | --- | --- |
+| 联网文件 `packages/bao_agent/lib/src/engine/isolate.dart` | 上游 #1048（信任本机证书） | 内置核心的 isolate 里用 `HttpOverrides` 让它建的 `HttpClient` 额外信任本机的根证书（公司 CA、代理的证书）。证书由主进程读本机证书库后传进来（macOS 调 `/usr/bin/security`，Windows 调 `powershell.exe`，Linux 读系统证书文件），不经网络。 | 不变：仍是用户配置的模型上游 |
+| 域名 `arc.app` | 上游 #1072（区分不同浏览器） | `lib/browser/browser_bridge.dart` 里按可执行文件路径认浏览器名字的规则，匹配 `/Applications/Arc.app/...`，不是网址。 | 无 |
+
+同一次合并里，Claude Code CLI 新增了环境变量 `NODE_EXTRA_CA_CERTS`（指向数据目录里导出的本机证书 PEM），作用同上，也不连新地址。
+
 ## 已知未处理
 
 - **macOS 公证未验证。** 安装包里现在带有 macOS 版的远程服务端可执行文件（`Contents/Resources/remote/`），`tool/build_macos.dart` 的签名步骤没有单独签它们，提交苹果公证时可能被拒。本机自用（临时签名）不受影响。
