@@ -226,7 +226,7 @@ void main() {
 
   AgentThread started(String answer) {
     final id = RegExp(r'Started: (\S+) in').firstMatch(answer)![1];
-    return workspace.threads.firstWhere((t) => SessionTools.idOf(t) == id);
+    return SessionTools.threadOf(workspace, id!)!;
   }
 
   test('a conversation started reports back by itself, its reply whole, '
@@ -252,7 +252,19 @@ void main() {
     await until(() => fromAgents(boss).isNotEmpty);
     final (from, report) = fromAgents(boss).single;
     expect(from, 'Tests');
-    expect(report, contains('is done.\nIts reply:\n\n$_quickReply'));
+    // As the user reads it: what it said, whole.
+    expect(report, _quickReply);
+    // Each card names the conversation it came from; the lead's steps and
+    // cards, the one it handed work to.
+    UserMessageItem card(AgentThread thread) => [
+      for (var i = 0; i < thread.session.itemCount; i++)
+        if (thread.session.itemAt(i) case final UserMessageItem item
+            when item.fromAgent != null)
+          item,
+    ].first;
+    expect(card(tests).fromSession, boss.id);
+    expect(card(boss).fromSession, tests.id);
+    expect(SessionTools.handedFrom(boss.session, workspace), [tests]);
     await settle(boss);
 
     // Waited on: said by the wait, not told again.
@@ -295,13 +307,7 @@ void main() {
     // It asks the user: told the lead.
     await until(() => fromAgents(boss).isNotEmpty);
     final (_, report) = fromAgents(boss).single;
-    expect(
-      report,
-      contains(
-        'waits on the user. It asks them: Which one? (This / That) Only '
-        'they can answer it',
-      ),
-    );
+    expect(report, 'Which one?\n- This\n- That');
     await settle(boss);
     // Answering it is the user's.
     expect(tests.session.pendingInteraction, isNotNull);
