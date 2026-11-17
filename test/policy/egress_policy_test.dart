@@ -223,6 +223,9 @@ void main() {
       // the pages an agent fetches.
       'packages/bao_agent/lib/src/api/anthropic_client.dart',
       'packages/bao_agent/lib/src/hooks/hooks.dart',
+      // The built-in core's isolate: its clients trust the machine's own root
+      // certificates too (upstream #1048); still the upstream the user set.
+      'packages/bao_agent/lib/src/engine/isolate.dart',
       'packages/bao_agent/lib/src/mcp/oauth.dart',
       'packages/bao_agent/lib/src/mcp/transports.dart',
       'packages/bao_agent/lib/src/testing/fake_api.dart',
@@ -295,6 +298,8 @@ void main() {
       'go.microsoft.com',
       'json-schema.org',
       'example.com',
+      // Not a host: Arc's app bundle, in a browser's executable path.
+      'arc.app',
       'cirw.in',
       'contour-terminal.org',
       'stackoverflow.com',
