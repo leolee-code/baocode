@@ -63,6 +63,12 @@ void main() {
       ].join('\n');
       expect(ReplySuggestions.of(raw), ['a', 'b', 'c']);
     });
+
+    test('all in one tag, a line each: each its own', () {
+      final raw = '好了。\n${_said('帮我删掉这条\n\n  我自己点删除\r\n先留着，别动它')}';
+      expect(ReplySuggestions.strip(raw), '好了。');
+      expect(ReplySuggestions.of(raw), ['帮我删掉这条', '我自己点删除', '先留着，别动它']);
+    });
   });
 
   test('the agent is told when they turn on, a word while on, and once '
