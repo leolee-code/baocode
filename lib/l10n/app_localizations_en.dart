@@ -8256,6 +8256,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String remoteConnectionLost(String host) {
+    return 'The connection to $host is lost, and being tried again by itself. What you send waits until it is back';
+  }
+
+  @override
   String get remoteRetry => 'Retry';
 
   @override
@@ -8320,6 +8325,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String remoteStatusFailed(String kind, String host) {
     return '$kind: $host (disconnected)';
+  }
+
+  @override
+  String remoteStatusDown(String kind, String host) {
+    return '$kind: $host (disconnected, retrying...)';
   }
 
   @override
@@ -9081,6 +9091,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sidebarHostDisconnected => 'Disconnected';
+
+  @override
+  String get sidebarHostDown => 'Disconnected, retrying...';
 
   @override
   String get sidebarHostIdle => 'Not connected';
