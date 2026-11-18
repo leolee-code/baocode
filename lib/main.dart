@@ -33,6 +33,7 @@ import 'diagnostics/crash_reports.dart';
 import 'diagnostics/exit_watch.dart';
 import 'diagnostics/frame_watch.dart';
 import 'diagnostics/hang_watch.dart';
+import 'diagnostics/key_watch.dart';
 import 'extensions/theme_extensions.dart';
 import 'ide/editor_minimap_setting.dart';
 import 'ide/editor_word_wrap.dart';
@@ -158,6 +159,7 @@ Future<void> main(List<String> arguments) async {
   if (!kIsWeb) {
     AppEventWatch.start();
     FrameWatch.start();
+    KeyWatch.start();
     MarkdownEditor.onInputLost = (message) => appEvent('input', message);
   }
   // The Windows app's own logs and the macOS app's hang reports go beside
