@@ -70,6 +70,8 @@ class FakeLanguageFeatures extends ChangeNotifier implements LanguageFeatures {
   Future<void> Function(String serverId)? onInstall;
 
   final _workspaceEdits = StreamController<LspApplyEditRequest>.broadcast();
+  final _serverMessages = StreamController<LspServerMessage>.broadcast();
+  final Map<String, List<String>> logs = {};
 
   void setDiagnostics(String path, List<LspDiagnostic> list) {
     diagnostics[path] = list;
@@ -286,11 +288,21 @@ class FakeLanguageFeatures extends ChangeNotifier implements LanguageFeatures {
   Stream<LspApplyEditRequest> get workspaceEdits => _workspaceEdits.stream;
 
   @override
+  Stream<LspServerMessage> get serverMessages => _serverMessages.stream;
+
+  void emitServerMessage(LspServerMessage message) =>
+      _serverMessages.add(message);
+
+  @override
   Listenable get progressChanges => this;
 
   @override
   List<LanguageServerStatus> statusFor(String path) =>
       statuses[path] ?? const [];
+
+  @override
+  List<String> logFor(String serverId, {String? path}) =>
+      logs[serverId] ?? const [];
 
   @override
   void retry(String serverId, {String? path}) => retried.add(serverId);
@@ -304,6 +316,7 @@ class FakeLanguageFeatures extends ChangeNotifier implements LanguageFeatures {
   @override
   void dispose() {
     unawaited(_workspaceEdits.close());
+    unawaited(_serverMessages.close());
     super.dispose();
   }
 }
