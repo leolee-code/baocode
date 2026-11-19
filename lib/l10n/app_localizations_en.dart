@@ -2791,6 +2791,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get turnCopy => 'Copy reply';
 
   @override
+  String get turnFork => 'Fork from here';
+
+  @override
   String get turnCopied => 'Copied';
 
   @override
