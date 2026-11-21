@@ -229,6 +229,10 @@ Future<void> main(List<String> arguments) async {
   // Claude Code's skills, agents, commands, rules, servers, hooks and
   // plugins: the Customize view beside the chat, and Settings → Customize.
   final customizations = CustomizationStore();
+  // What a key's and a frame's work grows with, for their slow lines.
+  FrameWatch.counts[workspace] = () =>
+      '${workspace.threads.length} agents, '
+      '${workspace.projects.length} projects';
   // The first frame is in the kept theme, restored from storage as VS Code
   // does before the workbench shows; its file is read after. The setting
   // is settings.json's `workbench.colorTheme`, the theme's colors the
