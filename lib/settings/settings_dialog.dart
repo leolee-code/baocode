@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../base/mouse_navigation.dart';
 import '../base/smooth_scroll.dart';
 import '../ide/ide_color_theme_picker.dart' show ideSelectColorThemeCommandId;
+import '../kernel/claude_code/claude_core_setting.dart';
 import '../keybindings/default_keybindings.dart' show openKeybindingsCommandId;
 import '../keybindings/key_chord.dart';
 import '../keybindings/keybinding_service.dart';
@@ -28,6 +29,7 @@ enum SettingsSection {
   general,
   appearance,
   models,
+  builtinCore,
   usage,
   network,
   ssh,
@@ -48,6 +50,7 @@ enum SettingsCategory {
     SettingsSection.general,
     SettingsSection.appearance,
     SettingsSection.models,
+    SettingsSection.builtinCore,
     SettingsSection.usage,
     SettingsSection.network,
     SettingsSection.ssh,
@@ -171,12 +174,21 @@ class SettingsDialogState extends State<SettingsDialog> {
     _keptDocked = true;
   }
 
-  late SettingsSection _section = widget.section;
+  /// Whether [section] is shown in the settings navigation and command palette.
+  static bool isVisible(SettingsSection section) =>
+      section != SettingsSection.builtinCore ||
+      ClaudeCore.current() == ClaudeCore.builtin;
+
+  late SettingsSection _section = isVisible(widget.section)
+      ? widget.section
+      : SettingsSection.general;
 
   SettingsSection get section => _section;
 
   /// Shows [section]'s page.
-  void show(SettingsSection section) => setState(() => _section = section);
+  void show(SettingsSection section) => setState(
+    () => _section = isVisible(section) ? section : SettingsSection.general,
+  );
 
   /// The width set by dragging, shown as [_shownWidth]. A drag sets it
   /// without building the dialog again (see the window's sidebar).
@@ -238,6 +250,7 @@ class SettingsDialogState extends State<SettingsDialog> {
     SettingsSection.general => Codicons.settingsGear,
     SettingsSection.appearance => Codicons.symbolColor,
     SettingsSection.models => Codicons.sparkle,
+    SettingsSection.builtinCore => Codicons.chip,
     SettingsSection.usage => SvgIcons.usage,
     SettingsSection.network => Codicons.radioTower,
     SettingsSection.ssh => Codicons.remote,
@@ -266,6 +279,7 @@ class SettingsDialogState extends State<SettingsDialog> {
       SettingsSection.general => l10n.settingsSectionGeneral,
       SettingsSection.appearance => l10n.settingsSectionAppearance,
       SettingsSection.models => l10n.settingsSectionModels,
+      SettingsSection.builtinCore => l10n.settingsSectionBuiltinCore,
       SettingsSection.usage => l10n.settingsSectionUsage,
       SettingsSection.network => l10n.settingsSectionNetwork,
       SettingsSection.ssh => l10n.settingsSectionSsh,
@@ -285,6 +299,7 @@ class SettingsDialogState extends State<SettingsDialog> {
   static String keywords(BuildContext context, SettingsSection section) =>
       switch (section) {
         SettingsSection.appearance => context.l10n.settingsAppearanceKeywords,
+        SettingsSection.builtinCore => context.l10n.settingsBuiltinCoreKeywords,
         SettingsSection.usage => context.l10n.ustatKeywords,
         SettingsSection.network => context.l10n.settingsNetworkKeywords,
         SettingsSection.ssh => context.l10n.settingsSshKeywords,
@@ -341,15 +356,25 @@ class SettingsDialogState extends State<SettingsDialog> {
   }
 
   final TextEditingController _search = TextEditingController();
+  late final Listenable _coreChanges;
+
+  void _onCoreChanged() {
+    setState(() {
+      if (!isVisible(_section)) _section = SettingsSection.general;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     _search.addListener(() => setState(() {}));
+    _coreChanges = ClaudeCore.changes;
+    _coreChanges.addListener(_onCoreChanged);
   }
 
   @override
   void dispose() {
+    _coreChanges.removeListener(_onCoreChanged);
     _search.dispose();
     _width.dispose();
     super.dispose();
@@ -658,7 +683,7 @@ class SettingsDialogState extends State<SettingsDialog> {
       for (final category in SettingsCategory.values)
         [
           for (final section in category.sections)
-            if (_matches(section)) section,
+            if (isVisible(section) && _matches(section)) section,
         ],
     ].where((sections) => sections.isNotEmpty).toList();
     final hide = SidebarIconButton(
