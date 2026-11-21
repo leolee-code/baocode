@@ -76,6 +76,12 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ; (docs/egress-policy.md): a new version is this installer, run by hand.
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
+; Off: the app Setup opens ([Run], an update's /RELAUNCH too) would inherit
+; it, runasoriginaluser or not where Setup was not elevated, and so would
+; every terminal and agent the app starts. They then cannot go through a
+; junction (pnpm's node_modules, Scoop's shims): ERROR_UNTRUSTED_MOUNT_POINT,
+; until the app is opened again some other way (#1169).
+RedirectionGuard=no
 DisableProgramGroupPage=yes
 ; A running BaoCode is asked to close (it quits on WM_ENDSESSION, see
 ; windows/runner/flutter_window.cpp), and ended if it does not: a version
