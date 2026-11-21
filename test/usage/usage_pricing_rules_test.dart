@@ -529,6 +529,19 @@ void main() {
       expect(call.serverTools, {'web_search': 2});
     });
 
+    test("a Gemini upstream's thoughts count as reasoning", () {
+      final meter =
+          UsageMeter(
+            provider: 'gw',
+            model: 'm',
+            info: const UsageRequestInfo(requestClass: UsageClass.main),
+          )..upstreamLine(
+            'data: {"response":{"usageMetadata":{"promptTokenCount":100,'
+            '"candidatesTokenCount":5,"thoughtsTokenCount":20}}}',
+          );
+      expect(meter.finish(200)!.reasoning, 20);
+    });
+
     test("Claude Code's own: as its usage tells", () {
       final kept = <UsageCall>[];
       ClaudeUsageMeter(
