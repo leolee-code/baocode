@@ -12,6 +12,7 @@ import 'settings_widgets.dart';
 /// [shell]'s name in the list.
 String windowsShellName(BuildContext context, WindowsShell shell) =>
     switch (shell) {
+      WindowsShell.baoBash => 'BaoCode Bash',
       WindowsShell.gitBash => 'Git Bash',
       WindowsShell.cmd => 'cmd',
       WindowsShell.powershell => 'PowerShell',
@@ -19,8 +20,8 @@ String windowsShellName(BuildContext context, WindowsShell shell) =>
     };
 
 /// Settings → General → Command Line (Windows): the shell agents run
-/// commands in, picked from a list (Git Bash where it is installed); under
-/// it the file of a custom one.
+/// commands in, picked from a list (BaoCode Bash where the app carries it,
+/// Git Bash where it is installed); under it the file of a custom one.
 class CommandLineSettings extends StatelessWidget {
   const CommandLineSettings({super.key, required this.shells});
 
@@ -71,7 +72,11 @@ class CommandLineSettings extends StatelessWidget {
         semanticLabel: '${l10n.commandLineShell}: $name',
         entries: () => [
           for (final shell in WindowsShell.values)
-            if (shell != WindowsShell.gitBash || shells.gitBash != null)
+            if (switch (shell) {
+              WindowsShell.baoBash => shells.baoBash != null,
+              WindowsShell.gitBash => shells.gitBash != null,
+              _ => true,
+            })
               IdeMenuAction(
                 windowsShellName(context, shell),
                 checked: shell == shown,

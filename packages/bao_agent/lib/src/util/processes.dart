@@ -156,6 +156,17 @@ class Shell {
   /// name ([ShellKind.of]).
   static const chosenVariable = 'BAOCODE_SHELL';
 
+  /// What a model is told of BaoCode Bash, which it would not expect of
+  /// Windows: the tools it has, and the paths it takes. Short, the tools it
+  /// might doubt named, and how to ask of any other.
+  static const baoBashNote =
+      'The shell is bash (BaoCode Bash), with the usual Unix tools built in: '
+      '`rg`, `grep`, `sed`, `awk`, `find`, `xargs`, `jq`, `tar`, `diff`, '
+      '`timeout`, `sha256sum`, the coreutils and more (`type -t NAME` says '
+      '`builtin` for one). Write paths as `C:\\x`, `C:/x` or `/c/x`: all name '
+      'the same file, and `/tmp` is the temporary folder. Windows programs on '
+      'the PATH run as usual and write UTF-8.';
+
   /// What a model is told of PowerShell, where it would write bash.
   static const powershellNote =
       'The shell is PowerShell, not bash: write PowerShell (`;` between '

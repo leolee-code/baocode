@@ -15,6 +15,12 @@ class _Host implements WindowsShellHost {
   final Map<String, String> _environment;
 
   @override
+  String? baoBash() => baoBashCandidates(
+    executable: Platform.resolvedExecutable,
+    current: Directory.current.path,
+  ).where((path) => File(path).existsSync()).firstOrNull;
+
+  @override
   String? gitBash() => Shell.gitBash(_environment);
 
   String get _systemRoot =>

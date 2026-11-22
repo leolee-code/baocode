@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bao_agent/bao_agent.dart' show Shell;
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 import 'windows_shell_stub.dart'
     if (dart.library.io) 'windows_shell_io.dart'
@@ -11,6 +12,11 @@ import 'windows_shell_stub.dart'
 /// commands in (`commandLine.shell` in settings.json; [custom] the file
 /// `commandLine.shellPath` names).
 enum WindowsShell {
+  /// BaoCode Bash, which the installer carries (`bash\bash.exe` beside the
+  /// app, built from third_party/bash-exe): bash with `rg`, `sed`, `jq` and
+  /// the other usual tools built in. Named as upstream's settings name it.
+  baoBash,
+
   /// Git for Windows' bash, where it is installed.
   gitBash,
   cmd,
@@ -28,7 +34,7 @@ enum WindowsShell {
   /// one when its file is a `bash.exe` or `sh.exe`.
   static bool takesBash(WindowsShell shell, String executable) =>
       switch (shell) {
-        gitBash => true,
+        baoBash || gitBash => true,
         cmd || powershell => false,
         custom => RegExp(
           r'(^|[\\/])(bash|sh)(\.exe)?$',
@@ -48,9 +54,33 @@ abstract interface class ShellSettings implements Listenable {
   Future<void> update(String key, Object? value);
 }
 
+/// Where BaoCode Bash may be, first found first: beside [executable] as the
+/// installer puts it (`bash\bash.exe`, tool/build_windows.dart), then, for a
+/// development run, `build\bash\` of the checkout (the working folder's, or
+/// one the executable is built under) as tool/build_bash_exe.dart leaves it.
+List<String> baoBashCandidates({
+  required String executable,
+  required String current,
+}) {
+  final windows = p.windows;
+  final exeDir = windows.dirname(executable);
+  return [
+    windows.join(exeDir, 'bash', 'bash.exe'),
+    windows.join(current, 'build', 'bash', 'bash.exe'),
+    // A debug build's executable is under the checkout's build\.
+    for (var dir = exeDir, i = 0; i < 10; dir = windows.dirname(dir), i++)
+      if (windows.basename(dir) == 'build')
+        windows.join(dir, 'bash', 'bash.exe'),
+  ];
+}
+
 /// Finds the shells to pick from on this machine (windows_shell_io.dart);
 /// replaceable under test.
 abstract interface class WindowsShellHost {
+  /// BaoCode Bash's `bash.exe` ([baoBashCandidates]); null where this
+  /// build carries none.
+  String? baoBash();
+
   /// Git for Windows' `bash.exe`; null where it is not installed.
   String? gitBash();
 
@@ -65,10 +95,12 @@ abstract interface class WindowsShellHost {
 /// The pick of the shell agents run commands in, on Windows. Picked, both
 /// cores run their commands in it: the built-in one ([coreEnvironment];
 /// `Shell.find` in bao_agent), Claude Code's CLI ([cliEnvironment]) where
-/// it takes bash. With none picked, nothing changes: the CLI's own
-/// `CLAUDE_CODE_GIT_BASH_PATH`, else Git Bash, else cmd.exe.
+/// it takes bash. With none picked: a `CLAUDE_CODE_GIT_BASH_PATH` the user
+/// set, else BaoCode Bash where the app carries it, else Git Bash, else
+/// cmd.exe.
 ///
-/// Nothing is downloaded: only shells already on the machine are offered.
+/// Nothing is downloaded: BaoCode Bash comes with the installer, built from
+/// source (docs/bash-exe.md); the other shells are the machine's own.
 class WindowsShells extends ChangeNotifier {
   WindowsShells({required this.host, this.settings}) {
     settings?.addListener(notifyListeners);
@@ -86,13 +118,17 @@ class WindowsShells extends ChangeNotifier {
     return WindowsShells(host: host, settings: settings);
   }
 
-  /// What the built-in core's environment gets for its commands to run in
-  /// the shell picked (`BAOCODE_SHELL`); nothing with none picked, or where
-  /// it is not offered.
+  /// What the built-in core's environment gets: BaoCode Bash where the app
+  /// carries it (`BAOCODE_BASH`, which `Shell.find` takes after a bash the
+  /// user set, and tells the model of), and the shell picked
+  /// (`BAOCODE_SHELL`). Nothing where it is not offered.
   static Map<String, String> coreEnvironment() {
     final shells = current;
-    if (shells == null || shells.chosen == null) return const {};
-    return {Shell.chosenVariable: shells.inUse.executable};
+    if (shells == null) return const {};
+    return {
+      Shell.baoBashVariable: ?shells.baoBash,
+      if (shells.chosen != null) Shell.chosenVariable: shells.inUse.executable,
+    };
   }
 
   /// The variable Claude Code's CLI takes the bash its Bash tool runs from
@@ -102,15 +138,33 @@ class WindowsShells extends ChangeNotifier {
 
   /// What the CLI's environment gets, for it to run commands in the shell
   /// picked where that takes bash (else it finds Git Bash itself):
-  /// [cliBashVariable], ahead of one the user set. Nothing with none
-  /// picked: theirs stays, as does one in their settings.json's `env`,
-  /// which the CLI reads after.
-  static Map<String, String> cliEnvironment() {
+  /// [cliBashVariable], ahead of one the user set. With none picked,
+  /// BaoCode Bash where the app carries it, unless [environment] (the
+  /// CLI's own) names a bash already: theirs stays, as does one in their
+  /// settings.json's `env`, which the CLI reads after.
+  static Map<String, String> cliEnvironment([
+    Map<String, String> environment = const {},
+  ]) {
     final shells = current;
-    if (shells == null || shells.chosen == null) return const {};
+    if (shells == null) return const {};
+    if (shells.chosen == null) {
+      final bash = shells.baoBash;
+      final theirs = environment[cliBashVariable];
+      if (bash == null || (theirs != null && theirs.isNotEmpty)) {
+        return const {};
+      }
+      return {cliBashVariable: bash};
+    }
     final (:shell, :executable) = shells.inUse;
     if (!WindowsShell.takesBash(shell, executable)) return const {};
     return {cliBashVariable: executable};
+  }
+
+  /// Whether [cliEnvironment]'s [given] has the CLI run BaoCode Bash, which
+  /// it is then told of ([Shell.baoBashNote]).
+  static bool cliRunsBaoBash(Map<String, String> given) {
+    final bash = current?.baoBash;
+    return bash != null && given[cliBashVariable] == bash;
   }
 
   final WindowsShellHost host;
@@ -134,14 +188,19 @@ class WindowsShells extends ChangeNotifier {
     _ => null,
   };
 
+  /// BaoCode Bash, as looked for once.
+  late final String? baoBash = host.baoBash();
+
   /// Git Bash, as looked for once.
   late final String? gitBash = host.gitBash();
 
   /// The shell agents run commands in: the one picked, where it can run
-  /// (Git Bash found, a custom file named); else, as with none picked, Git
-  /// Bash where installed, else cmd.exe.
+  /// (BaoCode Bash or Git Bash found, a custom file named); else, as with
+  /// none picked, BaoCode Bash where the app carries it, else Git Bash where
+  /// installed, else cmd.exe.
   WindowsShellInUse get inUse {
     final picked = switch (chosen) {
+      WindowsShell.baoBash => baoBash,
       WindowsShell.gitBash => gitBash,
       WindowsShell.cmd => host.cmd(),
       WindowsShell.powershell => host.powershell(),
@@ -150,6 +209,9 @@ class WindowsShells extends ChangeNotifier {
     };
     if ((chosen, picked) case (final shell?, final executable?)) {
       return (shell: shell, executable: executable);
+    }
+    if (baoBash case final bash?) {
+      return (shell: WindowsShell.baoBash, executable: bash);
     }
     if (gitBash case final git?) {
       return (shell: WindowsShell.gitBash, executable: git);

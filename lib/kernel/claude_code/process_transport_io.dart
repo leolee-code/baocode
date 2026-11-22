@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bao_agent/bao_agent.dart' show Shell;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../../models/launch_environment.dart';
@@ -84,6 +85,23 @@ class ProcessTransport implements ClaudeCodeTransport {
     }
   }
 
+  /// [launch] told what BaoCode Bash has when [bash] (what
+  /// [WindowsShells.cliEnvironment] gives the CLI) has it run that one:
+  /// ahead of the launch's own instructions, unless they are all its
+  /// prompt.
+  @visibleForTesting
+  static ClaudeLaunch toldOfBash(
+    ClaudeLaunch launch,
+    Map<String, String> bash,
+  ) => !WindowsShells.cliRunsBaoBash(bash) || launch.ownPrompt
+      ? launch
+      : launch.copyWith(
+          instructions: [
+            Shell.baoBashNote,
+            if (launch.instructions case final own? when own.isNotEmpty) own,
+          ].join('\n\n'),
+        );
+
   static Future<ClaudeCodeTransport> start(ClaudeLaunch launch) async {
     // Left over from a run that ended without stopping them: gone first, so
     // two processes never go on with one session.
@@ -92,6 +110,15 @@ class ProcessTransport implements ClaudeCodeTransport {
     if (!Directory(launch.cwd).existsSync()) {
       throw ClaudeFolderGone(launch.cwd);
     }
+    // Its commands run in the shell Settings → General → Command Line
+    // picks, where that is a bash, else in BaoCode Bash where the app
+    // carries it and the user named no bash of their own (Windows); told
+    // what that one has.
+    final bash = WindowsShells.cliEnvironment({
+      ...Platform.environment,
+      ...cli.environment,
+    });
+    launch = toldOfBash(launch, bash);
     // A key goes in a file only the user reads, not the command line.
     final settingsFile = launch.hasSecrets
         ? await ClaudeSettingsFile.write(launch.settings)
@@ -124,9 +151,7 @@ class ProcessTransport implements ClaudeCodeTransport {
           ...cli.environment,
           ...proxy,
           ...certificates,
-          // Its commands run in the shell Settings → General → Command
-          // Line picks, where that is a bash (Windows).
-          ...WindowsShells.cliEnvironment(),
+          ...bash,
           // A provider's session: none of the user's own model setup.
           if (launch.env != null)
             for (final name in ClaudeModelVariables.inherited) name: '',
