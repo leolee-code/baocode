@@ -105,11 +105,11 @@
 
 同一次合并里，Claude Code CLI 新增了环境变量 `NODE_EXTRA_CA_CERTS`（指向数据目录里导出的本机证书 PEM），作用同上，也不连新地址。
 
-## 截图和图片转 JPEG 带来的新依赖（待评审）
+## 截图和图片转 JPEG 带来的新依赖
 
 从上游 #1196 移植了其中两部分（分支 `merge/upstream-jpeg-images`）：浏览器工具的截图在缩放或标注后仍存成 JPEG（质量 75）；输入框附的不透明 PNG 在转成 JPEG（质量 85）更小时转。图片由 Flutter 解码，`package:image` 只负责把像素编码成 JPEG（`lib/images/jpeg_images.dart`），编码后再解码一次核对尺寸，不对就保留原图。上游同一提交里给 Antigravity 请求做 gzip 和手机连接的部分没有移植。
 
-这给 `pubspec.lock` 带来三个新包，`test/policy` 因此报错。三个包都**不联网、不新增外联对象**，评审通过后才能加进 `test/policy/egress_policy_test.dart` 的包白名单：
+这给 `pubspec.lock` 带来三个新包，`test/policy` 因此报错。三个包都**不联网、不新增外联对象**，经人工评审后已加进 `test/policy/egress_policy_test.dart` 的包白名单：
 
 | 包 | 怎么来的 | 实际做什么 | 联网情况 |
 | --- | --- | --- | --- |

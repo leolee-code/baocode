@@ -425,6 +425,9 @@ void main() {
       // An HTTP client, brought in by flutter_svg and the like: nothing of
       // the app's imports it (checked below).
       'http', 'http_parser',
+      // JPEG pictures (lib/images/jpeg_images.dart): image encodes them,
+      // archive and posix come with it. None reaches the network.
+      'image', 'archive', 'posix',
     };
     final found = {
       for (final line in File('pubspec.lock').readAsLinesSync())
