@@ -66,6 +66,7 @@ class ClaudeLaunch {
     this.instructions,
     this.ownPrompt = false,
     this.models = const [],
+    this.additionalModels = const [],
     this.sdkServers = const [],
     this.tools,
     this.userServers = false,
@@ -125,6 +126,10 @@ class ClaudeLaunch {
   /// first sending each a request of its own, to see that it is one: a
   /// provider's, as `modelPicker` rows, which it takes as known.
   final List<String> models;
+
+  /// Qualified model refs the local proxy can route, not picker rows.
+  final List<String> additionalModels;
+
   final String? permissionMode;
   final String? effort;
 
@@ -223,6 +228,7 @@ class ClaudeLaunch {
     instructions: instructions ?? this.instructions,
     ownPrompt: ownPrompt,
     models: models,
+    additionalModels: additionalModels,
     sdkServers: sdkServers,
     tools: tools,
     userServers: userServers,
@@ -279,9 +285,9 @@ class ClaudeLaunch {
   }
 
   /// A provider's session's models, let through the user's own
-  /// `availableModels`: those it is switched to and starts on, and its
-  /// roles' (see [allowedModels]).
-  List<String> get allowlist => allowedModels(env, [...models, ?model]);
+  /// `availableModels`: its picker rows, routed refs and roles at launch.
+  List<String> get allowlist =>
+      allowedModels(env, [...models, ...additionalModels, ?model]);
 
   /// The user's own setup set empty, in the shell's environment or their
   /// settings' `env`: `CLAUDE_CODE_EFFORT_LEVEL` would hold every request

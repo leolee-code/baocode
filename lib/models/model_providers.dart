@@ -102,6 +102,14 @@ class ModelProviders extends ChangeNotifier {
   ModelProvider? provider(String? id) =>
       providers.where((provider) => provider.id == id).firstOrNull;
 
+  /// Qualified names the CLI can use through the local model proxy.
+  List<String> get proxyModelRefs => [
+    for (final provider in enabled)
+      for (final model in provider.enabledModels)
+        if (provider.connected || provider.endpointOf(model) != null)
+          modelRef(provider.id, model.id),
+  ];
+
   /// The provider and model [ref] (a [modelRef]) picks, if both are there;
   /// the provider's main model when the one picked is gone, or is an image
   /// model (not one to converse with).

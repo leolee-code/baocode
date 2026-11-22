@@ -94,7 +94,7 @@ start(
     providers: providers,
     providerEnvironment: (provider, model) async {
       environments.add((provider.id, model));
-      return {'ANTHROPIC_BASE_URL': 'http://proxy/${provider.id}'};
+      return {'ANTHROPIC_BASE_URL': 'http://127.0.0.1:12345/p/${provider.id}'};
     },
   );
   return (
@@ -125,7 +125,7 @@ void main() {
     // The CLI takes 200K for a model it does not know: told its window.
     expect(launch.env, {
       'CLAUDE_CODE_MAX_CONTEXT_TOKENS': '400000',
-      'ANTHROPIC_BASE_URL': 'http://proxy/gw',
+      'ANTHROPIC_BASE_URL': 'http://127.0.0.1:12345/p/gw',
     });
     expect(launch.autocompact, 400000);
     // Through the proxy: not Claude Code's own effort.
@@ -147,8 +147,12 @@ void main() {
     // swap them for one of Claude's (#219).
     expect(
       launch.settings['availableModels'],
-      containsAll([...options, 'haiku']),
+      containsAll([...options, 'haiku', '@gw/gpt-5', '@gw/plain', '@other/m']),
     );
+    expect(launch.allowlist, isNot(contains('@gw/off')));
+    expect(options, isNot(contains('@gw/gpt-5')));
+    expect(options, isNot(contains('@gw/plain')));
+    expect(options, isNot(contains('@other/m')));
     kernel.dispose();
   });
 
@@ -663,7 +667,7 @@ void main() {
       expect(launches.last.model, 'm');
       expect(launches.last.env, {
         'CLAUDE_CODE_MAX_CONTEXT_TOKENS': '200000',
-        'ANTHROPIC_BASE_URL': 'http://proxy/other',
+        'ANTHROPIC_BASE_URL': 'http://127.0.0.1:12345/p/other',
       });
 
       // Back to Claude Code as set up: nothing injected.
