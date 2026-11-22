@@ -1,0 +1,25 @@
+[package]
+name = "bash-exe"
+description = "BaoCode Bash: a bash 5.3 for Windows with GNU-style utilities built in"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "bash"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+bstr.workspace = true
+pi-shell.workspace = true
+tokio.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true

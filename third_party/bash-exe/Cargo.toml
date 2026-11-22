@@ -1,0 +1,298 @@
+[workspace]
+members = [
+   "bash-exe",
+   "crates/pi-builtins",
+   "crates/pi-diff",
+   "crates/pi-iso",
+   "crates/pi-shell",
+   "crates/pi-vfs",
+   "crates/pi-walker",
+   "crates/vendor/grep-searcher",
+   "crates/vendor/jaq-core",
+   "crates/vendor/jaq-json",
+   "crates/vendor/jaq-std",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.3.0"
+edition = "2024"
+rust-version = "1.95"
+license = "GPL-3.0-or-later"
+authors = ["BaoCode", "Stencil Labs, Inc."]
+homepage = "https://baocode.dev/"
+repository = "https://github.com/baocode-dev/bash-exe"
+
+[patch.crates-io]
+# grep-searcher 0.1.17 (latest release) searches either a blocking `io::Read`
+# or a whole slice; the vendored copy adds the chunk-fed `search_push` (see its
+# README.md).
+grep-searcher = { path = "crates/vendor/grep-searcher" }
+# jaq-core 3.1.1, jaq-json 2.0.3 and jaq-std 3.0.3 back pi's `jq` builtin. The
+# vendored copies poll cancellation inside filter evaluation and follow jq
+# 1.8's semantics where jaq's differ (see each crate's README.md).
+jaq-core = { path = "crates/vendor/jaq-core" }
+jaq-json = { path = "crates/vendor/jaq-json" }
+jaq-std = { path = "crates/vendor/jaq-std" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+# Unwind (not abort): the uutils boundary (pi-shell coreutils) turns a panic
+# in a utility into that command failing, not the shell aborting.
+panic = "unwind"
+
+# Share host and target dependency units in release builds.
+[profile.release.package."*"]
+opt-level = 3
+codegen-units = 1
+
+[profile.ci]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+debug = false
+strip = "symbols"
+# Safe here only because `debug = false` leaves no debuginfo to lose. Never
+# copy this line into a profile that sets `debug` — see [profile.dev] below.
+split-debuginfo = "off"
+
+[profile.ci.package."*"]
+opt-level = 3
+codegen-units = 16
+
+[profile.local]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+incremental = true
+strip = false
+[profile.local.package."*"]
+opt-level = 3
+codegen-units = 16
+
+# `release` codegen with symbols kept for `perf`/`samply`/Instruments. Full
+# opt-level so timings match production; only the binary size differs.
+# `cargo build --profile profiling`.
+[profile.profiling]
+inherits = "release"
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+strip = false
+
+[profile.dev]
+opt-level = 0
+lto = false
+codegen-units = 256
+incremental = true
+debug = "line-tables-only"
+# Mach-O keeps DWARF in the .o files and points at them from the executable's
+# debug map (N_OSO); `unpacked` is what retains those .o files. Setting this to
+# "off" silently strips file:line from backtrace frames in our own crates,
+# because ld64 never merges DWARF into the binary. The `panicked at foo.rs:3`
+# header survives via #[track_caller] and hides the loss. Linux: split DWARF
+# (.dwo) rather than debuginfo packed into every rlib. Windows: no-op (PDB).
+split-debuginfo = "unpacked"
+
+# Deps compile optimized once and cache; your own crates stay fast.
+[profile.dev.package."*"]
+opt-level = 2
+codegen-units = 256
+debug = false
+
+# pi-shell's bash engine recurses per nesting level (arithmetic, parser);
+# unoptimized frames overflow the 2 MiB test-thread stack before its recursion
+# limits hit.
+[profile.dev.package.pi-shell]
+opt-level = 1
+
+[workspace.lints.rust]
+# ──────────────────────────────────────────────────────────────────────────────
+# Rust Lint Levels
+# ──────────────────────────────────────────────────────────────────────────────
+mismatched_lifetime_syntaxes = "allow"
+
+[workspace.lints.clippy]
+# ──────────────────────────────────────────────────────────────────────────────
+# Base Lint Levels
+# ──────────────────────────────────────────────────────────────────────────────
+all = { level = "warn", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Meta: Lint Attributes
+# ──────────────────────────────────────────────────────────────────────────────
+allow_attributes_without_reason = "warn" # Enforce reason for all #[allow]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Safety & Unsafe Code
+# ──────────────────────────────────────────────────────────────────────────────
+borrow_as_ptr = "allow"
+cast_ptr_alignment = "allow"
+ptr_as_ptr = "allow"
+ref_as_ptr = "allow"
+undocumented_unsafe_blocks = "warn"
+unsafe_derive_deserialize = "allow"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Numeric Casts & Conversions
+# ──────────────────────────────────────────────────────────────────────────────
+cast_lossless = "allow"            # u32 as u64 - 'as' is cleaner than From
+cast_possible_truncation = "allow" # u64 as u32 - often intentional
+cast_possible_wrap = "allow"       # u32 as i32 - can be intentional
+cast_precision_loss = "allow"      # f64 as f32 - sometimes acceptable
+cast_sign_loss = "allow"           # i32 as u32 - sometimes needed
+tuple_array_conversions = "allow"  # Non-Into conversion is more clear
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Floating Point
+# ──────────────────────────────────────────────────────────────────────────────
+float_cmp = "allow" # Tests mostly do this + we know what we're doing
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Functions & Closures
+# ──────────────────────────────────────────────────────────────────────────────
+inline_always = "allow"                      # Needed for performance-critical code
+must_use_candidate = "allow"                 # Not every function needs #[must_use]
+needless_pass_by_value = "allow"
+redundant_closure_for_method_calls = "allow" # .map(ToString::to_string) can be clearer
+return_self_not_must_use = "allow"           # Builder pattern methods
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Structs & Types
+# ──────────────────────────────────────────────────────────────────────────────
+inconsistent_struct_constructor = "allow"
+missing_fields_in_debug = "allow"         # Not every field needs to be in Debug output
+struct_excessive_bools = "allow"          # Usually with builders
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Pattern Matching
+# ──────────────────────────────────────────────────────────────────────────────
+match_same_arms = "allow"                    # Can be intentional for clarity
+match_wildcard_for_single_variants = "allow" # _ can be clearer than listing variants
+option_if_let_else = "allow"                 # match/if-let-else often clearer
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Imports & Module Organization
+# ──────────────────────────────────────────────────────────────────────────────
+enum_glob_use = "allow"
+items_after_statements = "allow" # Sometimes more readable
+wildcard_imports = "allow"       # Cleaner for preludes and test modules
+redundant_pub_crate = "allow"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Variables & Type Inference
+# ──────────────────────────────────────────────────────────────────────────────
+let_underscore_untyped = "allow" # Type obvious from context
+similar_names = "allow"          # 'req' and 'res' together are fine
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Literals & Formatting
+# ──────────────────────────────────────────────────────────────────────────────
+unreadable_literal = "allow" # 10_000_000 vs 0xDEADBEEF is context dependent
+verbose_bit_mask = "allow"   # Explicit bit patterns can be clearer than hex
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Code Style
+# ──────────────────────────────────────────────────────────────────────────────
+default_trait_access = "allow"        # Default::default() sometimes clearer
+significant_drop_tightening = "allow" # We pay attention to this already
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests & Assertions
+# ──────────────────────────────────────────────────────────────────────────────
+assert_is_empty = "allow" # `is_empty()` states intent without brittle type annotations
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Documentation
+# ──────────────────────────────────────────────────────────────────────────────
+missing_errors_doc = "allow" # Documenting every error return is often redundant
+missing_panics_doc = "allow" # Not every panic needs docs, especially assert!
+tabs_in_doc_comments = "allow" # rustfmt formats doc examples with hard tabs (format_code_in_doc_comments)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Complexity
+# ──────────────────────────────────────────────────────────────────────────────
+too_many_arguments = "allow" # Argument count is rarely the real complexity signal
+too_many_lines = "allow"     # Arbitrary limits don't account for necessary complexity
+
+[workspace.dependencies]
+# Ours.
+pi-builtins = { path = "crates/pi-builtins" }
+pi-diff = { path = "crates/pi-diff" }
+pi-iso = { path = "crates/pi-iso" }
+pi-shell = { path = "crates/pi-shell" }
+pi-vfs = { path = "crates/pi-vfs" }
+pi-walker = { path = "crates/pi-walker" }
+
+# The bash engine's (`crates/pi-shell/src/bash`).
+blake3 = { version = "1.8.7", features = ["rayon"] }
+bstr = { version = "1.13.1", features = ["serde"] }
+encoding_rs = "0.8.42"
+hashbrown = "0.17.1"
+jiff = "0.2.38"
+libm = "0.2.16"
+postcard = { version = "1.1.3", default-features = false, features = ["use-std"] }
+strum = { version = "0.28.0", features = ["derive"] }
+tempfile = "3.27.0"
+
+# Async.
+async-trait = "0.1"
+flume = "0.12"
+futures = "0.3"
+parking_lot = "0.12.5"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["full"] }
+
+# Data, errors, text.
+anyhow = "1.0"
+base64 = "0.23"
+bytes = "1"
+clap = { version = "4", features = ["derive", "env"] }
+fancy-regex = "0.17"
+regex = "1"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+smallvec = { version = "1.16.1", features = ["serde", "write", "union", "const_new"] }
+thiserror = "2"
+toml = "1.1"
+xutf = "1.5"
+xxhash-rust = { version = "0.8", features = ["xxh64", "xxh32"] }
+zstd = "0.14"
+
+# Search and file walking (`rg`, `grep`, `find`, `fd`).
+globset = "0.4"
+grep-matcher = "0.1"
+grep-pcre2 = "0.1"
+grep-regex = "0.1"
+grep-searcher = "0.1"
+ignore = "0.4"
+pcre2-sys = "0.2.10"
+
+# The system.
+libc = "0.2.191"
+windows-sys = { version = "0.61", features = [
+   "Win32_Foundation",
+   "Win32_Globalization",
+   "Win32_Media_Audio",
+   "Win32_Media_Multimedia",
+   "Win32_Security",
+   "Win32_Storage_FileSystem",
+   "Win32_Storage_ProjectedFileSystem",
+   "Win32_System_Com",
+   "Win32_System_Console",
+   "Win32_System_LibraryLoader",
+   "Win32_System_IO",
+   "Win32_System_Ioctl",
+   "Win32_System_JobObjects",
+   "Win32_System_Pipes",
+   "Win32_System_SystemInformation",
+   "Win32_System_Threading",
+] }
+winreg = "0.56"
