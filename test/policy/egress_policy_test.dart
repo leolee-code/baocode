@@ -34,7 +34,8 @@ Iterable<String> _code(File file) =>
     file.readAsLinesSync().where((line) => !line.trimLeft().startsWith('//'));
 
 /// What shipped code is read for the publisher's hosts: the app, its
-/// packages, the runners and the browser extension.
+/// packages, the runners, the browser extension and what third_party/
+/// builds (BaoCode Bash, docs/bash-exe.md).
 List<File> _shipped() {
   const extensions = {
     '.dart', '.swift', '.m', '.mm', '.h', '.c', '.cc', '.cpp', '.js', //
@@ -50,6 +51,7 @@ List<File> _shipped() {
     'linux',
     'browser_extension',
     'tool',
+    'third_party',
   ]) {
     final directory = Directory(root);
     if (!directory.existsSync()) continue;
@@ -58,9 +60,17 @@ List<File> _shipped() {
       final path = _path(entry);
       if (path.contains('/ephemeral/') ||
           path.contains('/build/') ||
+          // cargo's, where one is run in third_party/bash-exe itself.
+          path.contains('/target/') ||
           path.contains('/.dart_tool/') ||
           path.contains('/Pods/') ||
           path.contains('/test/')) {
+        continue;
+      }
+      // Of what third_party/ builds, its code and manifests: its test
+      // corpora are not all text.
+      if (path.startsWith('third_party/') &&
+          !(path.endsWith('.rs') || path.endsWith('.toml'))) {
         continue;
       }
       if (extensions.any(path.endsWith)) files.add(entry);

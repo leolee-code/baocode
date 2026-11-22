@@ -18,7 +18,7 @@
 | 渠道版（归因、渠道账号登录） | `baocode.dev/activate`、`stats.baocode.dev/v1/attribution`、渠道商站点 | `lib/channel/`、`BAOCODE_CHANNEL` 编译开关 |
 | 推荐上游列表 | `baocode.dev/featured/upstreams.json` | `lib/models/featured_upstreams*.dart` |
 | 上游一键导入 | `baocode.dev/import` → `baocode://provider/import` | `lib/models/upstream_import.dart` |
-| Windows 的 BaoCode Bash 下载 | `dl.baocode.dev/tools/bash-exe/` | `lib/bash_exe/` |
+| Windows 的 BaoCode Bash 下载（现在从源码构建、随安装包携带，见下文“随包携带的 BaoCode Bash”） | `dl.baocode.dev/tools/bash-exe/` | `lib/bash_exe/` |
 | 浏览器扩展的商店/下载入口 | `dl.baocode.dev`、`baocode.dev/dl/browser-extension` | `lib/browser/extension_store.dart`（现在扩展随应用资源打包，见下） |
 | SSH 远程服务端的按需下载 | `dl.baocode.dev/releases/remote/` | `DownloadedServerBinaries`（现在随安装包携带，见下） |
 | 发布流水线 | 发布方的 R2 存储 | `.github/workflows/` 里除 `checks.yml` 外的全部 |
@@ -75,7 +75,7 @@
 | `www.google.com`、`www.baidu.com`、`www.youtube.com`、模型接口地址 | 用户在"设置 → 网络"里点连通性测试 | 无用户数据 |
 | `cdn.jsdelivr.net` | 首次启动取一次 emoji 图集 | 无用户数据 |
 
-构建时（不是应用运行时）打包脚本还会下载：Windows 的 OpenSSH（GitHub Releases）、Inno Setup、WebView2 的 nuget 包。
+构建时（不是应用运行时）打包脚本还会下载：Windows 的 OpenSSH（GitHub Releases）、Inno Setup、WebView2 的 nuget 包；构建 BaoCode Bash 时，rustup 安装固定版本的 Rust 工具链（`static.rust-lang.org`），cargo 按 `Cargo.lock` 从 crates.io 拉 crate。
 
 #### 测试查不到的情况
 
@@ -118,6 +118,36 @@
 | `posix` 6.5.4 | `archive` 的依赖 | 用 FFI 调本机 libc（macOS 是 `/usr/lib/libSystem.dylib`），`archive` 解压文件时设置文件权限才用。JPEG 编码路径用不到它，库是按需加载的 | 不联网，没有 `hook/`；`Socket` 只出现在判断文件类型的 `isSocket` 里 |
 
 `posix` 依赖的 `ffi`、`meta`、`path` 原来就在白名单里。
+
+## 随包携带的 BaoCode Bash（待评审）
+
+Windows 安装包带有 BaoCode Bash（`bash\bash.exe`），agent 默认用它跑命令。它从 `third_party/bash-exe/` 的源码构建（上游 commit `b649c538`，git subtree 引入），应用**不下载它**。来源、构建和升级步骤见 `docs/bash-exe.md`。
+
+引入前做过静态审计：没有遥测、自动更新、崩溃上报，也没有后台联网；代码里出现的网址只是帮助文本、测试数据和识别命令输出的规则。注册表只读 `HKLM\SOFTWARE\GitForWindows` 的安装路径。不写默认的命令历史文件（`bash -c` 时连 `HISTFILE` 都不继承）。
+
+**会联网的只有下面几个命令，都要用户或 agent 显式执行**，和 `git`、`curl` 一样：
+
+| 命令 | 连到哪里 | 源码 |
+| --- | --- | --- |
+| `rsync` 连远程：`rsync://主机/…`、`主机::模块` | 直连对方的 rsync 守护进程（TCP 873）。只做客户端，不支持 `--daemon`，不监听端口 | `crates/pi-builtins/src/rsync/transport.rs`、`transport/tcp.rs`、`transport/tcp/sock_windows.rs`（`sock_unix.rs` 是 Unix 版） |
+| `rsync` 连远程：`主机:路径` | 启动 `ssh`（或 `-e`、`RSYNC_RSH` 指定的程序） | 同上 |
+| `hostname -i`、`hostname -f` | 向 DNS 服务器解析本机名 | `crates/pi-builtins/src/hostname.rs` |
+| `lsof -i @主机名` | 主机名不在 hosts 文件里时，向 DNS 服务器正向解析 | `crates/pi-builtins/src/lsof.rs` |
+
+源码里其余用到联网 API 的文件都不连外部：
+
+| 源码 | 实际做什么 |
+| --- | --- |
+| `crates/pi-shell/src/sys/socket.rs`、`bash/socket.rs`、`bash/vm/builtins/zsh_mod_zftp.rs` | zsh 的 `ztcp`、`zftp`、`zsocket`。只在 Unix 上编译，Windows 版没有；bash 的 `/dev/tcp` 没有实现 |
+| `crates/pi-shell/src/sys/pump.rs`、`sys/pump/os.rs`、`crates/pi-builtins/src/host.rs` | 本机进程之间的 socketpair（Unix）；Windows 上用管道和命名管道 |
+| `crates/pi-builtins/src/cp.rs`、`rsync/tree/sys.rs` | 复制 Unix 域 socket 这种特殊文件（Unix） |
+| `crates/pi-builtins/src/lsof/linux.rs` | 解析 `/proc/net` 里的地址（Linux） |
+| `crates/pi-builtins/src/rsync/daemon.rs` | rsync 守护进程协议的客户端，走上面的 tcp 传输；文件里直接用联网 API 的只有测试代码（本机 127.0.0.1） |
+| `crates/pi-builtins/src/rsync/operands.rs` | 只是错误信息里的 `getaddrinfo` 字样 |
+
+依赖：`Cargo.lock` 里 331 个包，除了 11 个仓库自己的 crate，其余 320 个都来自 crates.io（`deny.toml` 也禁止其他来源和 git 依赖）。没有 HTTP 客户端或 TLS 库（reqwest、hyper、ureq、curl、rustls、native-tls、openssl 都没有）。能联网的底层库只有 `tokio`（开了 `net` 特性，但源码里没有用 `tokio::net`）、`mio`、`socket2`，以及只在 FreeBSD、OpenBSD 上用的 `dns-lookup`；rsync 直接调系统的 socket API。构建脚本只有 `crates/pi-shell/build.rs`，读本地的 toml 规则文件，不联网；pcre2、oniguruma、zstd 的 C 代码由各自 crate 自带的源码编译。
+
+评审通过后，`test/policy/egress_policy_test.dart` 会：扫描 `third_party/` 的 `.rs`、`.toml` 里有没有发布方域名；检查 `Cargo.lock` 只有 crates.io 来源、包名都在 `test/policy/bash_exe_crates.txt` 里；检查用到联网 API 的 Rust 源码文件都在上面两张表里。
 
 ## 已知未处理
 
