@@ -119,7 +119,7 @@
 
 `posix` 依赖的 `ffi`、`meta`、`path` 原来就在白名单里。
 
-## 随包携带的 BaoCode Bash（待评审）
+## 随包携带的 BaoCode Bash
 
 Windows 安装包带有 BaoCode Bash（`bash\bash.exe`），agent 默认用它跑命令。它从 `third_party/bash-exe/` 的源码构建（上游 commit `b649c538`，git subtree 引入），应用**不下载它**。来源、构建和升级步骤见 `docs/bash-exe.md`。
 
@@ -147,7 +147,7 @@ Windows 安装包带有 BaoCode Bash（`bash\bash.exe`），agent 默认用它�
 
 依赖：`Cargo.lock` 里 331 个包，除了 11 个仓库自己的 crate，其余 320 个都来自 crates.io（`deny.toml` 也禁止其他来源和 git 依赖）。没有 HTTP 客户端或 TLS 库（reqwest、hyper、ureq、curl、rustls、native-tls、openssl 都没有）。能联网的底层库只有 `tokio`（开了 `net` 特性，但源码里没有用 `tokio::net`）、`mio`、`socket2`，以及只在 FreeBSD、OpenBSD 上用的 `dns-lookup`；rsync 直接调系统的 socket API。构建脚本只有 `crates/pi-shell/build.rs`，读本地的 toml 规则文件，不联网；pcre2、oniguruma、zstd 的 C 代码由各自 crate 自带的源码编译。
 
-评审通过后，`test/policy/egress_policy_test.dart` 会：扫描 `third_party/` 的 `.rs`、`.toml` 里有没有发布方域名；检查 `Cargo.lock` 只有 crates.io 来源、包名都在 `test/policy/bash_exe_crates.txt` 里；检查用到联网 API 的 Rust 源码文件都在上面两张表里。
+以上经人工评审。`test/policy/egress_policy_test.dart` 据此检查：`third_party/` 的 `.rs`、`.toml` 里没有发布方域名；`Cargo.lock` 只有 crates.io 来源，包名都在 `test/policy/bash_exe_crates.txt` 里；用到联网 API 的 Rust 源码文件（测试代码除外）都在上面两张表里。升级后出现新的 crate 或新的联网文件，测试会失败：先在这里写明它做什么，经人工评审后再加进清单。
 
 ## 已知未处理
 

@@ -459,6 +459,104 @@ void main() {
     expect(imports, isEmpty, reason: 'package:http is not to be used');
   });
 
+  // Rule 4, for BaoCode Bash (third_party/bash-exe, docs/bash-exe.md): what
+  // it is built from comes from crates.io alone, each crate reviewed.
+  test('BaoCode Bash is built from crates.io alone, of the crates listed', () {
+    final known = {
+      for (final line in File(
+        'test/policy/bash_exe_crates.txt',
+      ).readAsLinesSync())
+        if (line.trim() case final name
+            when name.isNotEmpty && !name.startsWith('#'))
+          name,
+    };
+    final names = <String>{};
+    final sources = <String>{};
+    final lock = File('third_party/bash-exe/Cargo.lock').readAsStringSync();
+    for (final package in lock.split('[[package]]').skip(1)) {
+      final name = RegExp(r'^name = "([^"]+)"', multiLine: true);
+      final source = RegExp(r'^source = "([^"]+)"', multiLine: true);
+      if (name.firstMatch(package) case final match?) names.add(match[1]!);
+      if (source.firstMatch(package) case final match?) sources.add(match[1]!);
+    }
+    expect(names, isNotEmpty);
+    expect(sources, {
+      'registry+https://github.com/rust-lang/crates.io-index',
+    }, reason: 'crates.io alone, no git or other registry');
+    expect(
+      names.difference(known),
+      isEmpty,
+      reason:
+          'A new crate: read what it does on the network (docs/egress-policy.md, '
+          '"随包携带的 BaoCode Bash"), then list it in '
+          'test/policy/bash_exe_crates.txt.',
+    );
+  });
+
+  // Rule 4, for BaoCode Bash: the files of its source that use the network's
+  // APIs, each with what it does, as docs/egress-policy.md lists them. Only
+  // rsync to a remote, hostname -i/-f and lsof -i @host reach out, when run.
+  test('BaoCode Bash: only the source files listed use the network', () {
+    final reaches = RegExp(
+      r'std::net\b|tokio::net|TcpStream|TcpListener|UdpSocket|UnixStream|'
+      r'UnixListener|ToSocketAddrs|to_socket_addrs|socket2|WinSock|'
+      r'getaddrinfo|getnameinfo|lookup_host|libc::(socket|connect|bind)\(',
+    );
+    const known = {
+      // Reach out, when run: rsync to a remote (a daemon over TCP, or ssh),
+      // hostname -i/-f and lsof -i @host (a DNS lookup).
+      'crates/pi-builtins/src/rsync/transport.rs',
+      'crates/pi-builtins/src/rsync/transport/tcp.rs',
+      'crates/pi-builtins/src/rsync/transport/tcp/sock_unix.rs',
+      'crates/pi-builtins/src/rsync/transport/tcp/sock_windows.rs',
+      'crates/pi-builtins/src/hostname.rs',
+      'crates/pi-builtins/src/lsof.rs',
+      // zsh's ztcp, zftp and zsocket: built on Unix only.
+      'crates/pi-shell/src/sys/socket.rs',
+      'crates/pi-shell/src/bash/socket.rs',
+      'crates/pi-shell/src/bash/vm/builtins/zsh_mod_zftp.rs',
+      // This machine only: socket pairs between its processes, Unix
+      // sockets copied as files, /proc/net read, the daemon protocol's
+      // tests on 127.0.0.1, an error's words.
+      'crates/pi-shell/src/sys/pump.rs',
+      'crates/pi-shell/src/sys/pump/os.rs',
+      'crates/pi-builtins/src/host.rs',
+      'crates/pi-builtins/src/cp.rs',
+      'crates/pi-builtins/src/rsync/tree/sys.rs',
+      'crates/pi-builtins/src/lsof/linux.rs',
+      'crates/pi-builtins/src/rsync/daemon.rs',
+      'crates/pi-builtins/src/rsync/operands.rs',
+    };
+    const root = 'third_party/bash-exe/';
+    final found = <String>{};
+    for (final part in const ['bash-exe', 'crates']) {
+      final directory = Directory('$root$part');
+      if (!directory.existsSync()) continue;
+      for (final entry in directory.listSync(recursive: true)) {
+        if (entry is! File) continue;
+        final path = _path(entry).substring(root.length);
+        if (!path.endsWith('.rs') ||
+            path.contains('/tests/') ||
+            path.contains('/testkit/') ||
+            path.contains('/conformance') ||
+            path.contains('/target/') ||
+            RegExp(r'(^|/|_)tests?\.rs$').hasMatch(path)) {
+          continue;
+        }
+        final text = String.fromCharCodes(entry.readAsBytesSync());
+        if (reaches.hasMatch(text)) found.add(path);
+      }
+    }
+    expect(found, isNotEmpty);
+    expect(
+      found.difference(known),
+      isEmpty,
+      reason:
+          'docs/egress-policy.md, "随包携带的 BaoCode Bash": write what it '
+          'does on the network there, then list it here once reviewed',
+    );
+  });
+
   // Rule 1: the browser extension is the one this checkout carries, loaded
   // unpacked: nothing makes the browser fetch or update it from elsewhere.
   test('the extension updates from nowhere and calls nothing', () {
