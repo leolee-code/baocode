@@ -105,6 +105,20 @@
 
 同一次合并里，Claude Code CLI 新增了环境变量 `NODE_EXTRA_CA_CERTS`（指向数据目录里导出的本机证书 PEM），作用同上，也不连新地址。
 
+## 截图和图片转 JPEG 带来的新依赖（待评审）
+
+从上游 #1196 移植了其中两部分（分支 `merge/upstream-jpeg-images`）：浏览器工具的截图在缩放或标注后仍存成 JPEG（质量 75）；输入框附的不透明 PNG 在转成 JPEG（质量 85）更小时转。图片由 Flutter 解码，`package:image` 只负责把像素编码成 JPEG（`lib/images/jpeg_images.dart`），编码后再解码一次核对尺寸，不对就保留原图。上游同一提交里给 Antigravity 请求做 gzip 和手机连接的部分没有移植。
+
+这给 `pubspec.lock` 带来三个新包，`test/policy` 因此报错。三个包都**不联网、不新增外联对象**，评审通过后才能加进 `test/policy/egress_policy_test.dart` 的包白名单：
+
+| 包 | 怎么来的 | 实际做什么 | 联网情况 |
+| --- | --- | --- | --- |
+| `image` 4.13.1 | 应用直接依赖 | 纯 Dart 的图片编解码库，这里只用 `encodeJpg` | `lib/` 里没有 `HttpClient`、`Socket` 等联网 API，没有 `hook/`（构建时不下载东西）。出现的网址都在注释里 |
+| `archive` 4.7.1 | `image` 的依赖 | 纯 Dart 的 zip/gzip/tar 等压缩库，`image` 用它处理 PNG 的 deflate | `lib/` 里的 `HttpClient` 只出现在文档注释的示例里，没有 `hook/` |
+| `posix` 6.5.4 | `archive` 的依赖 | 用 FFI 调本机 libc（macOS 是 `/usr/lib/libSystem.dylib`），`archive` 解压文件时设置文件权限才用。JPEG 编码路径用不到它，库是按需加载的 | 不联网，没有 `hook/`；`Socket` 只出现在判断文件类型的 `isSocket` 里 |
+
+`posix` 依赖的 `ffi`、`meta`、`path` 原来就在白名单里。
+
 ## 已知未处理
 
 - **macOS 公证未验证。** 安装包里现在带有 macOS 版的远程服务端可执行文件（`Contents/Resources/remote/`），`tool/build_macos.dart` 的签名步骤没有单独签它们，提交苹果公证时可能被拒。本机自用（临时签名）不受影响。
