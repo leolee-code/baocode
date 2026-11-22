@@ -20,7 +20,7 @@ edition = "2024"
 rust-version = "1.95"
 license = "GPL-3.0-or-later"
 authors = ["BaoCode", "Stencil Labs, Inc."]
-homepage = "https://baocode.dev/"
+homepage = "https://github.com/baocode-dev/bash-exe"
 repository = "https://github.com/baocode-dev/bash-exe"
 
 [patch.crates-io]
