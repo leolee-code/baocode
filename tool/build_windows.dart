@@ -9,6 +9,10 @@
 //                                                  (built here, and on the
 //                                                  other machines, gathered
 //                                                  with --from)
+//   dart run tool/build_windows.dart --bash-built   take BaoCode Bash already
+//                                                  in build\bash\ (built by
+//                                                  tool/build_bash_exe.dart
+//                                                  for the same --arch)
 //   dart run tool/build_windows.dart --patched-engine
 //                                                  put in tool/engine's
 //                                                  flutter_windows.dll (x64)
@@ -40,6 +44,11 @@
 // The installer lands in build/installers/. The bundle carries the remote
 // server's builds (tool/build_remote_server.dart): nothing is downloaded
 // for a remote host.
+//
+// It carries BaoCode Bash too (bash\bash.exe and its notices), which agents
+// run their commands in: built here from third_party/bash-exe by
+// tool/build_bash_exe.dart, with Rust's cargo (rustup), for the --arch
+// built. Nothing of it is fetched by the app (docs/bash-exe.md).
 import 'dart:ffi' show Abi;
 import 'dart:io';
 
@@ -120,6 +129,7 @@ Future<void> main(List<String> arguments) async {
     _fail('--skip-build and --build-only leave nothing to do.');
   }
   final remoteBuilt = arguments.contains('--remote-built');
+  final bashBuilt = arguments.contains('--bash-built');
   final archAt = arguments.indexOf('--arch');
   final arch = archAt >= 0 && archAt + 1 < arguments.length
       ? arguments[archAt + 1]
@@ -204,6 +214,32 @@ Future<void> main(List<String> arguments) async {
     }
   }
   _checkBundle(bundle, [r'remote\VERSION']);
+
+  // BaoCode Bash, built from its source for this architecture, beside the
+  // executable in bash\, where the app looks for it
+  // (lib/platform/windows_shell_io.dart).
+  final bash = Directory('${root.path}\\build\\bash');
+  if (bashBuilt) {
+    _step('Using BaoCode Bash already built');
+    if (!File('${bash.path}\\bash.exe').existsSync()) {
+      _fail('No BaoCode Bash built in ${bash.path}.');
+    }
+  } else {
+    _step('Building BaoCode Bash ($arch)');
+    await _run(Platform.resolvedExecutable, [
+      'run',
+      '${root.path}\\tool\\build_bash_exe.dart',
+      '--arch',
+      arch,
+      '--out',
+      bash.path,
+    ], root.path);
+  }
+  final bundleBash = Directory('${bundle.path}\\bash');
+  // What an older run put there goes.
+  if (bundleBash.existsSync()) bundleBash.deleteSync(recursive: true);
+  _copyDirectory(bash, bundleBash);
+  _checkBundle(bundle, [r'bash\bash.exe', r'bash\licenses\LICENSE']);
 
   _step('Putting in OpenSSH for Windows $_openSshRelease ($arch)');
   await _putOpenSsh(root, bundle, arch);
@@ -363,6 +399,19 @@ Future<void> _putOpenSsh(Directory root, Directory bundle, String arch) async {
     final file = File('${unpacked.path}\\$build\\$name');
     if (!file.existsSync()) _fail('No $name in the OpenSSH release.');
     file.copySync('${target.path}\\$name');
+  }
+}
+
+/// Copies [from], files and folders, into [to].
+void _copyDirectory(Directory from, Directory to) {
+  to.createSync(recursive: true);
+  for (final entry in from.listSync()) {
+    final name = entry.uri.pathSegments.lastWhere((s) => s.isNotEmpty);
+    if (entry is Directory) {
+      _copyDirectory(entry, Directory('${to.path}\\$name'));
+    } else if (entry is File) {
+      entry.copySync('${to.path}\\$name');
+    }
   }
 }
 

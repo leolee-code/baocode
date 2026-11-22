@@ -110,8 +110,10 @@ Name: "contextmenu"; \
 ; AOT app.so and flutter_assets) which sit beside the executable, and
 ; remote\ (VERSION and servers.json: which baocode-server remote projects
 ; run on their host, and where the app downloads it; tool/build_windows.dart
-; puts them there), and openssh\ (OpenSSH for Windows, for remote projects
-; where the system's ssh is too old to ask for a password).
+; puts them there), openssh\ (OpenSSH for Windows, for remote projects
+; where the system's ssh is too old to ask for a password), and bash\
+; (BaoCode Bash, which agents run their commands in, built from
+; third_party/bash-exe, with its notices).
 Source: "{#BundleDir}\*"; Excludes: "\baocode-browser-host.exe"; \
   DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; The browser extension's host, which a browser may have started again since
