@@ -617,6 +617,7 @@ printf '%s\n' "$line"
       expect(read('pwd'), root);
       expect(read('events'), '1');
       expect(jsonDecode(read('settings')), {
+        'attribution': {'commit': '', 'pr': ''},
         'env': {
           ...ClaudeLaunch.unsetEnvironment,
           'ANTHROPIC_API_KEY': 'sk-secret',

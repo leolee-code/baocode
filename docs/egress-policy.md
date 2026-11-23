@@ -152,8 +152,6 @@ Windows 安装包带有 BaoCode Bash（`bash\bash.exe`），agent 默认用它�
 ## 已知未处理
 
 - **macOS 公证未验证。** 安装包里现在带有 macOS 版的远程服务端可执行文件（`Contents/Resources/remote/`），`tool/build_macos.dart` 的签名步骤没有单独签它们，提交苹果公证时可能被拒。本机自用（临时签名）不受影响。
-- `ClaudeLaunch` 构造函数里署名参数的默认值仍是 `agent`。应用里发起会话的地方都显式传了设置值，所以默认不署名成立；新增调用点时要记得传。
-
 - 原生层里渠道版登录窗口的代码还在（`macos/Runner/LoginWindow.swift`、`windows/runner/login_window.cpp`、`linux/runner/login_window.cc`）。Dart 侧已无人调用，属于死代码；删除它要改各平台工程文件，需在对应平台上构建验证。
 - `lib/l10n/*.arb` 里还留有已删功能的文案（更新、手机、渠道等），不影响行为。
 - `site/`、`site-worker/`、`wrangler.jsonc`、`release-notes/` 是上游官网的源码，不进应用，未改动。

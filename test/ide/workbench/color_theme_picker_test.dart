@@ -724,6 +724,11 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(find.text(_waiting), findsNothing);
     await chord(tester, LogicalKeyboardKey.keyT, control: true);
+    // Chord mode ended: standalone Ctrl+T opens Go to Symbol in Workspace (`#`),
+    // not the Color Theme picker.
+    expect(find.text('Select Color Theme'), findsNothing);
+    expect(tester.widget<TextField>(_input).controller?.text, '#');
+    await _key(tester, LogicalKeyboardKey.escape);
     expect(_picker, findsNothing);
 
     // Modifiers alone wait for the second key.

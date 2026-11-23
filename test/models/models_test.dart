@@ -1415,6 +1415,7 @@ void main() {
       );
       expect(launch.hasSecrets, isFalse);
       expect(launch.settings, {
+        'attribution': {'commit': '', 'pr': ''},
         'env': {
           'CLAUDE_CODE_EFFORT_LEVEL': '',
           'ANTHROPIC_BASE_URL': 'http://127.0.0.1:1',
