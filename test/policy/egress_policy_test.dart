@@ -125,6 +125,7 @@ void main() {
       'lib/models/featured_upstreams_io.dart',
       'lib/models/upstream_import.dart',
       'lib/browser/extension_store.dart',
+      'lib/tips/star_prompt.dart',
       'lib/settings/pages/updates_page.dart',
       'lib/settings/pages/mobile_page.dart',
       'lib/settings/pages/channel_account_page.dart',
@@ -159,7 +160,7 @@ void main() {
       r'\b(TelemetryService|UpdateService|UpdateController|DiagnosticsUploader|'
       r'ChannelSetup|ChannelGate|ChannelAccount|LinkHost|PushWatcher|PhonePush|'
       r'FeaturedUpstream|UpstreamImport|DownloadedServerBinaries|BaoBash|'
-      r'ExtensionStore)\b|BAOCODE_CHANNEL|BAOCODE_TELEMETRY_URL|'
+      r'ExtensionStore|StarPrompt|starOnGitHubCommandId)\b|BAOCODE_CHANNEL|BAOCODE_TELEMETRY_URL|'
       r'BAOCODE_UPDATE_URL|BAOCODE_DIAGNOSTICS_URL|package:bao_link|'
       r'package:bao_iroh|package:bonsoir',
     );

@@ -115,7 +115,6 @@ import 'theme/workbench_theme.dart' show WorkbenchThemeService, themeColors;
 import 'tips/feature_tip.dart';
 import 'tips/feature_tips_controller.dart';
 import 'tips/feature_tips_view.dart';
-import 'tips/star_prompt.dart';
 import 'window/app_windows.dart';
 import 'window/code_args.dart';
 import 'window/window_settings.dart';
@@ -877,7 +876,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
     _lifecycle?.dispose();
     _sessionScan?.cancel();
     _attention?.dispose();
-    _starPrompt?.dispose();
     if (_tipsPresenter case final presenter?) {
       _tips
         ?..detach(presenter)
@@ -983,7 +981,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
         ideSelectColorThemeCommandId: _selectColorTheme,
         if (_tipsEnabled) showSetupGuideCommandId: _showSetupGuide,
         if (_tipsEnabled) resetFeatureTipsCommandId: _resetTips,
-        starOnGitHubCommandId: _starOnGitHub,
         if (BrowserBridge.instance.supported)
           browserWelcomeCommandId: _showBrowserWelcome,
         modelWelcomeCommandId: _showModelWelcome,
@@ -1005,7 +1002,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
       ideSelectColorThemeCommandId: _selectColorTheme,
       if (_tipsEnabled) showSetupGuideCommandId: _showSetupGuide,
       if (_tipsEnabled) resetFeatureTipsCommandId: _resetTips,
-      starOnGitHubCommandId: _starOnGitHub,
       if (BrowserBridge.instance.supported)
         browserWelcomeCommandId: _showBrowserWelcome,
       if (StashController.current != null)
@@ -1474,7 +1470,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
       ?action(ideSelectColorThemeCommandId, Codicons.symbolColor),
       ?action(showSetupGuideCommandId, Codicons.rocket),
       ?action(resetFeatureTipsCommandId, Codicons.discard),
-      ?action(starOnGitHubCommandId, Codicons.star),
       ?action(browserWelcomeCommandId, Codicons.globe),
       ?action(stashWelcomeCommandId, Codicons.note),
       ?action(modelWelcomeCommandId, Codicons.sparkle),
@@ -1577,12 +1572,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
       label: commandCatalog[resetFeatureTipsCommandId]!.title,
       run: _resetTips,
     ),
-    IdeCommand(
-      id: starOnGitHubCommandId,
-      category: 'Help',
-      label: commandCatalog[starOnGitHubCommandId]!.title,
-      run: _starOnGitHub,
-    ),
     if (BrowserBridge.instance.supported)
       IdeCommand(
         id: browserWelcomeCommandId,
@@ -1654,15 +1643,6 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
     _restores = tips.restores;
     tips.addListener(_tipsChanged);
     if (_main) _welcomeBrowserAfterUpdate(tips);
-    if (_main) {
-      _starPrompt = StarPrompt(
-        workspace: _workspace,
-        storage: tips.storage,
-        enabled: () => tips.enabled,
-        busy: () => _busyForTips() || !_inFront(),
-        ask: _showStarDialog,
-      )..start();
-    }
   }
 
   // --- The browser's welcome -------------------------------------------------
@@ -1726,28 +1706,11 @@ class _WorkbenchState extends State<Workbench> implements WindowDelegate {
     );
   }
 
-  // --- Asking for a star -----------------------------------------------------
-
-  /// Asks for a star on GitHub after the first conversations (see
-  /// StarPrompt): the main window's, once for the app.
-  StarPrompt? _starPrompt;
-
-  /// Whether the app is in front: the ask waits for the user to be back.
+  /// Whether the app is in front: the welcome waits for the user to be back.
   static bool _inFront() => switch (WidgetsBinding.instance.lifecycleState) {
     null || AppLifecycleState.resumed => true,
     _ => false,
   };
-
-  Future<void> _showStarDialog() async {
-    if (!mounted) return;
-    await showStarDialog(
-      context,
-      openUrl: (url) async => unawaited(openExternal('$url')),
-    );
-  }
-
-  /// Star BaoCode on GitHub, the command: the ask, now.
-  void _starOnGitHub() => unawaited(_starPrompt?.show() ?? _showStarDialog());
 
   /// The restores of the card seen (see [_tipsChanged]).
   int _restores = 0;

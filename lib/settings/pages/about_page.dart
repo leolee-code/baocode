@@ -1,32 +1,18 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 
-import '../../ide/ide_button.dart';
 import '../../l10n/l10n.dart';
 import '../../theme/app_theme.dart';
-import '../../theme/codicons.dart';
-import '../../tips/star_prompt.dart' show StarPrompt;
 import '../../update/version.dart';
-import '../../workspace/editor_launcher.dart' show openExternal;
 import '../../workspace/window_header/about_dialog.dart' show aboutIconAsset;
 import 'settings_widgets.dart';
 
-/// Settings → About: what BaoCode is, which build this is, and where it
-/// is made in the open: its repository, and where to tell of a problem.
+/// Settings → About: what BaoCode is and which build this is.
 class AboutSettingsPage extends StatelessWidget {
   const AboutSettingsPage({super.key});
-
-  static final issues = StarPrompt.repository.replace(
-    path: '${StarPrompt.repository.path}/issues',
-  );
-
-  void _open(Uri url) => unawaited(openExternal('$url'));
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final repository = StarPrompt.repository;
     return SettingsPage(
       title: l10n.settingsSectionAbout,
       lead: Padding(
@@ -78,7 +64,7 @@ class AboutSettingsPage extends StatelessWidget {
                   Text(l10n.aboutTagline, style: SettingsText.lead),
                   const SizedBox(height: 6),
                   Text(
-                    l10n.starPromptDetail,
+                    l10n.aboutDescription,
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12,
@@ -91,32 +77,7 @@ class AboutSettingsPage extends StatelessWidget {
           ],
         ),
       ),
-      children: [
-        SettingsCard(
-          children: [
-            SettingsRow(
-              label: 'GitHub',
-              description: l10n.aboutRepository(
-                '${repository.host}${repository.path}',
-              ),
-              trailing: IdeButton(
-                label: l10n.starPromptStar,
-                icon: Codicons.star,
-                onPressed: () => _open(repository),
-              ),
-            ),
-            SettingsRow(
-              label: l10n.aboutFeedback,
-              description: l10n.aboutFeedbackDetail,
-              trailing: IdeButton(
-                label: l10n.aboutOpen,
-                secondary: true,
-                onPressed: () => _open(issues),
-              ),
-            ),
-          ],
-        ),
-      ],
+      children: const [],
     );
   }
 }

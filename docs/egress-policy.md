@@ -20,6 +20,7 @@
 | 上游一键导入 | `baocode.dev/import` → `baocode://provider/import` | `lib/models/upstream_import.dart` |
 | Windows 的 BaoCode Bash 下载（现在从源码构建、随安装包携带，见下文“随包携带的 BaoCode Bash”） | `dl.baocode.dev/tools/bash-exe/` | `lib/bash_exe/` |
 | 浏览器扩展的商店/下载入口 | `dl.baocode.dev`、`baocode.dev/dl/browser-extension` | `lib/browser/extension_store.dart`（现在扩展随应用资源打包，见下） |
+| GitHub Star 弹窗与关于页上游反馈链接 | `github.com/baocode-dev/baocode`（及其 `/issues`） | `lib/tips/star_prompt.dart`、`lib/settings/pages/about_page.dart` 中的上游链接 |
 | SSH 远程服务端的按需下载 | `dl.baocode.dev/releases/remote/` | `DownloadedServerBinaries`（现在随安装包携带，见下） |
 | 发布流水线 | 发布方的 R2 存储 | `.github/workflows/` 里除 `checks.yml` 外的全部 |
 

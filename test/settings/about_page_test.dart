@@ -23,7 +23,7 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('says what BaoCode is, which build, and where it is made', (
+  testWidgets('says what BaoCode is and which build, with no upstream links', (
     tester,
   ) async {
     await show(tester, const Locale('zh'));
@@ -36,22 +36,16 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('github.com/baocode-dev/baocode · 免费开源，GPL-3.0 许可证'),
+      find.text('智能体以本地进程运行 Claude Code；它们所做的一切——消息、工具、差异和面板——都显示在这里。'),
       findsOneWidget,
     );
-    expect(find.text('去 GitHub 点 Star'), findsOneWidget);
-    // docs/egress-policy.md: no link to the publisher's site.
+    // docs/egress-policy.md: no links to the publisher's site or public repo.
+    expect(find.text('去 GitHub 点 Star'), findsNothing);
+    expect(find.text('反馈问题'), findsNothing);
+    expect(find.textContaining('baocode-dev/baocode'), findsNothing);
     expect(find.text('baocode.dev'), findsNothing);
     expect(find.text('更新日志'), findsNothing);
-    expect(find.text('反馈问题'), findsOneWidget);
     expect(find.text('设备 ID'), findsNothing);
     expect(tester.takeException(), isNull);
-  });
-
-  test('its links', () {
-    expect(
-      AboutSettingsPage.issues,
-      Uri.parse('https://github.com/baocode-dev/baocode/issues'),
-    );
   });
 }
