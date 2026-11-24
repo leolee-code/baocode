@@ -563,7 +563,7 @@ class ClaudeCodeKernel
   ({String provider, String? model, String? effort}) get _launchTarget {
     final custom = _custom;
     final effort = switch (custom) {
-      (_, final info) => _effortFor(info),
+      (_, final info) => _effortFor(_model, info),
       null => _effort,
     };
     return (
@@ -3407,7 +3407,7 @@ class ClaudeCodeKernel
     }
     if (sameProvider) {
       final (provider, info) = target!;
-      final effort = _effortFor(info);
+      final effort = _effortFor(id, info);
       _model = id;
       _change([
         (
@@ -3438,7 +3438,11 @@ class ClaudeCodeKernel
   void _keepModelSettings() {
     final current = model.selected;
     if (current == null) return;
-    if (effort.selected case final level?) _pickedEfforts[current] = level;
+    // Noted unless it is the model's own: what a model says it starts on is
+    // read from the model, so that a change there is taken.
+    if (effort.selected case final level? when level != _ownEffortOf(current)) {
+      _pickedEfforts[current] = level;
+    }
     // A provider's model's is noted as it is picked: else it is its own,
     // as its upstream says (see _windowFor).
     if (_custom != null) return;
@@ -3474,10 +3478,24 @@ class ClaudeCodeKernel
   /// The efforts Claude Code itself takes (`--effort`, `effortLevel`).
   static const _cliEfforts = {'low', 'medium', 'high', 'xhigh', 'max'};
 
-  /// The effort a provider's model is on: the one picked, if it offers
-  /// it, else its own.
-  String? _effortFor(ProviderModel info) =>
-      info.effortLevels.contains(_effort) ? _effort : info.initialEffort;
+  /// The effort [model] (a provider's [info]) is on: the one picked for it,
+  /// else the one it says it starts on, else the one carried over from
+  /// another model.
+  String? _effortFor(String? model, ProviderModel info) {
+    final levels = info.effortLevels;
+    final picked = model == null ? null : _pickedEfforts[model];
+    for (final level in [picked, info.effort, _effort]) {
+      if (level != null && levels.contains(level)) return level;
+    }
+    return info.initialEffort;
+  }
+
+  /// The effort [model] says a session starts on, as set on it; null for
+  /// Claude Code's own models, and one that says none.
+  String? _ownEffortOf(String? model) => switch (_providers.resolve(model)) {
+    (_, final info) => info.effort,
+    null => null,
+  };
 
   /// The context a provider's model (the one in use) fills before
   /// compacting: the one picked for it, if it offers it, else its own (as
@@ -3890,18 +3908,17 @@ class ClaudeCodeKernel
         ),
     ],
     selected: () {
-      if (_custom case (_, final info)) return _effortFor(info);
+      if (_custom case (_, final info)) return _effortFor(_model, info);
       final levels = _currentModel?.effortLevels ?? const <String>[];
       final effort = _running ? _appliedEffort : _effort;
       return levels.contains(effort) ? effort : null;
     },
     selectedFor: (model) {
       if (model == this.model.selected) return effort.selected;
-      final level = _pickedEfforts[model] ?? _effort;
       if (_providers.resolve(model) case (_, final info)) {
-        return info.effortLevels.contains(level) ? level : info.initialEffort;
+        return _effortFor(model, info);
       }
-      return _effortLevelsOf(model).contains(level) ? level : null;
+      return _effortLevelsOf(model).contains(_effort) ? _effort : null;
     },
     select: (model, id) {
       if (model != this.model.selected) _keepModelSettings();
@@ -3981,7 +3998,7 @@ class ClaudeCodeKernel
                 'model': requestedModel(
                   provider,
                   info,
-                  effort: _effortFor(info),
+                  effort: _effortFor(model, info),
                   fast: _pickedFast[model]!,
                 ),
               },

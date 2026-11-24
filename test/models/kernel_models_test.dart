@@ -374,6 +374,36 @@ void main() {
     kernel.dispose();
   });
 
+  test('a model that says which effort it starts on keeps it, over the one '
+      'carried from another model', () async {
+    final providers = ModelProviders.memory(
+      providers: [
+        const ModelProvider(
+          id: 'own',
+          name: 'Own',
+          protocol: ProviderProtocol.openaiChat,
+          baseUrl: 'https://own.example.com/v1',
+          models: [ProviderModel(id: 'm', effort: 'xhigh')],
+        ),
+      ],
+    );
+    // The effort of the model before it.
+    final (:kernel, :launches, clis: _, environments: _) = start(providers, {
+      'model': '@own/m',
+      'effort': 'medium',
+    });
+    kernel.prepare();
+    await pumpEventQueue();
+    expect(launches.single.model, 'm(xhigh)');
+    final effort = (kernel as SelectsEffort).effort;
+    expect(effort.selected, 'xhigh');
+    // Picked for it, another stands, and is the one it is on.
+    effort.select('@own/m', 'low');
+    await pumpEventQueue();
+    expect(effort.selected, 'low');
+    kernel.dispose();
+  });
+
   test('a context picked on a provider\'s model is compacted at from the '
       'next message', () async {
     final (:kernel, :launches, :clis, environments: _) = start(providers, {
