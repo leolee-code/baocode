@@ -176,6 +176,11 @@ class ClaudeCodeKernel
         _pickedFast[key.substring(speeds.length)] = value == 'fast';
       }
     }
+    // A model that says which effort it starts on keeps that: a pick
+    // saying the same stands for nothing, and would hide a change to it.
+    _pickedEfforts.removeWhere(
+      (model, effort) => effort == _ownEffortOf(model),
+    );
     if (_model case final model? when !_pickedFast.containsKey(model)) {
       _pickedFast[model] = settings[KernelChoiceKind.fast.name] == 'fast';
     }
@@ -434,6 +439,10 @@ class ClaudeCodeKernel
   String? _appliedEffort;
 
   /// The context the conversation may fill before it is compacted, as
+  /// The efforts picked this session, by model: the model's own says what
+  /// another session starts on, so these are not kept.
+  final Map<String, String> _chosenEfforts = {};
+
   /// picked (the CLI's `autoCompactWindow`); null to leave the CLI's own.
   int? _window;
 
@@ -3478,13 +3487,14 @@ class ClaudeCodeKernel
   /// The efforts Claude Code itself takes (`--effort`, `effortLevel`).
   static const _cliEfforts = {'low', 'medium', 'high', 'xhigh', 'max'};
 
-  /// The effort [model] (a provider's [info]) is on: the one picked for it,
-  /// else the one it says it starts on, else the one carried over from
-  /// another model.
+  /// The effort [model] (a provider's [info]) is on: the one picked for it
+  /// this session, else the one it says it starts on, else the one kept
+  /// for it before, else the one carried over from another model.
   String? _effortFor(String? model, ProviderModel info) {
     final levels = info.effortLevels;
-    final picked = model == null ? null : _pickedEfforts[model];
-    for (final level in [picked, info.effort, _effort]) {
+    final chosen = model == null ? null : _chosenEfforts[model];
+    final kept = model == null ? null : _pickedEfforts[model];
+    for (final level in [chosen, info.effort, kept, _effort]) {
       if (level != null && levels.contains(level)) return level;
     }
     return info.initialEffort;
@@ -3922,7 +3932,13 @@ class ClaudeCodeKernel
     },
     select: (model, id) {
       if (model != this.model.selected) _keepModelSettings();
-      _pickedEfforts[model] = id;
+      // Picked for this session; a model that says which effort it starts
+      // on has that for the next one, so the pick is not kept for it.
+      if (_ownEffortOf(model) != null) {
+        _chosenEfforts[model] = id;
+      } else {
+        _pickedEfforts[model] = id;
+      }
       if (_providers.resolve(model) case (final provider, final info)) {
         _effort = _appliedEffort = id;
         if (model != _model || _providerKeyOf(model) != _launchedProvider) {

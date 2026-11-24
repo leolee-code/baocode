@@ -388,9 +388,12 @@ void main() {
       ],
     );
     // The effort of the model before it.
+    // The effort of the model before it, and the one kept for this model by
+    // a session that ran before the model said which it starts on.
     final (:kernel, :launches, clis: _, environments: _) = start(providers, {
       'model': '@own/m',
       'effort': 'medium',
+      'effort@@own/m': 'medium',
     });
     kernel.prepare();
     await pumpEventQueue();
