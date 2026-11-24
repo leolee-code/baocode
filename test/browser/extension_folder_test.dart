@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:baocode/browser/browser_bridge.dart';
 import 'package:baocode/browser/extension_folder.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -65,6 +66,34 @@ void main() {
       ExtensionFolder.prepare(bundle: bundle, folder: temp.path),
       throwsStateError,
     );
+  });
+
+  test('shows the folder the way its platform opens one', () async {
+    final folder = p.join(temp.path, 'browser-extension');
+    final calls = <MethodCall>[];
+    const channel = MethodChannel('baocode/window');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    // Linux has no `open` (WindowControls' other way): its runner's
+    // `revealInFinder` runs `xdg-open` on the folder, written out first.
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    expect(await ExtensionFolder.reveal(folder: folder), folder);
+    expect(calls.single.method, 'revealInFinder');
+    expect(calls.single.arguments, folder);
+
+    // Windows hands it to Explorer through the window's `open` instead.
+    calls.clear();
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    expect(await ExtensionFolder.reveal(folder: folder), folder);
+    expect(calls.single.method, 'open');
+    expect((calls.single.arguments as Map)['target'], folder);
   });
 }
 

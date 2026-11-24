@@ -55,13 +55,16 @@ abstract final class ExtensionFolder {
   static bool get canReveal =>
       WindowControls.canRevealInFileManager || AppPlatform.isWindows;
 
-  /// [prepare]s it and shows the folder in Finder or File Explorer.
-  static Future<String> reveal() async {
-    final folder = await prepare();
-    if (AppPlatform.isMacOS) {
-      await WindowControls.revealInFileManager(folder);
-    } else {
+  /// [prepare]s it ([folder] by default) and shows the folder: in Finder, in
+  /// the desktop's file manager (Linux's `revealInFinder` runs `xdg-open`),
+  /// or in File Explorer — which the window hands it to, there being no
+  /// channel command for it on Windows.
+  static Future<String> reveal({String? folder}) async {
+    folder = await prepare(folder: folder);
+    if (AppPlatform.isWindows) {
       await WindowControls.openExternal(folder);
+    } else {
+      await WindowControls.revealInFileManager(folder);
     }
     return folder;
   }
