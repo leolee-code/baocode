@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -271,5 +272,35 @@ void main() {
     expect(cleared, 1);
     expect(find.textContaining('Using 0'), findsOneWidget);
     expect(button(tester, 'Clear').onPressed, isNull);
+  });
+
+  test('reveals the folder the way its platform shows one', () async {
+    final calls = <MethodCall>[];
+    const channel = MethodChannel('baocode/window');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    // Linux has no `open` (WindowControls' other way): its runner's
+    // `revealInFinder` runs `xdg-open` on the folder. Finder is the same.
+    for (final platform in [TargetPlatform.linux, TargetPlatform.macOS]) {
+      calls.clear();
+      debugDefaultTargetPlatformOverride = platform;
+      await DataDirectoryPage.revealFolder('/data/baocode');
+      expect(calls.single.method, 'revealInFinder', reason: '$platform');
+      expect(calls.single.arguments, '/data/baocode', reason: '$platform');
+    }
+
+    // Windows opens the folder itself, through the window.
+    calls.clear();
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    await DataDirectoryPage.revealFolder('/data/baocode');
+    expect(calls.single.method, 'open');
+    expect((calls.single.arguments as Map)['target'], '/data/baocode');
   });
 }

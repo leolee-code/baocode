@@ -57,14 +57,16 @@ class DataDirectoryPage extends StatefulWidget {
   static bool get canReveal =>
       WindowControls.canRevealInFileManager || AppPlatform.isWindows;
 
-  /// Shows the folder at [path] in Finder or File Explorer.
+  /// Shows the folder at [path] in Finder, in the desktop's file manager
+  /// (Linux's `revealInFinder` runs `xdg-open`), or in File Explorer — which
+  /// the window opens itself, there being no channel command for it on
+  /// Windows.
   static Future<void> revealFolder(String path) async {
-    // Windows opens the folder itself, rather than selecting it in its
-    // parent's.
-    if (AppPlatform.isMacOS) {
-      return WindowControls.revealInFileManager(path);
+    if (AppPlatform.isWindows) {
+      await WindowControls.openExternal(path);
+      return;
     }
-    await WindowControls.openExternal(path);
+    await WindowControls.revealInFileManager(path);
   }
 
   @override
