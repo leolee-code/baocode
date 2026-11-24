@@ -141,6 +141,7 @@ class ProviderModel {
     this.contextWindow,
     this.efforts,
     this.contexts,
+    this.effort,
     this.images = true,
     this.enabled = true,
     this.custom = false,
@@ -192,6 +193,10 @@ class ProviderModel {
   /// The efforts offered in the picker; [defaultEfforts] when null.
   final List<String>? efforts;
 
+  /// The effort a session starts with, one of the [efforts] offered; null
+  /// for [defaultEffort] if it is offered, the first otherwise.
+  final String? effort;
+
   /// The contexts offered in the picker; [defaultContexts] when null.
   final List<int>? contexts;
 
@@ -235,10 +240,11 @@ class ProviderModel {
   /// The efforts offered in the picker.
   List<String> get effortLevels => efforts ?? defaultEfforts;
 
-  /// The effort picked unless another is: [defaultEffort] if offered,
-  /// else the first; null with none offered.
+  /// The effort picked unless another is: [effort] if it is offered,
+  /// [defaultEffort] if it is, else the first; null with none offered.
   String? get initialEffort {
     final levels = effortLevels;
+    if (effort case final effort? when levels.contains(effort)) return effort;
     return levels.contains(defaultEffort) ? defaultEffort : levels.firstOrNull;
   }
 
@@ -271,6 +277,7 @@ class ProviderModel {
     String? Function()? label,
     int? Function()? contextWindow,
     List<String>? Function()? efforts,
+    String? Function()? effort,
     List<int>? Function()? contexts,
     bool? images,
     bool? enabled,
@@ -284,6 +291,7 @@ class ProviderModel {
     label: label == null ? this.label : label(),
     contextWindow: contextWindow == null ? this.contextWindow : contextWindow(),
     efforts: efforts == null ? this.efforts : efforts(),
+    effort: effort == null ? this.effort : effort(),
     contexts: contexts == null ? this.contexts : contexts(),
     images: images ?? this.images,
     enabled: enabled ?? this.enabled,
@@ -301,6 +309,7 @@ class ProviderModel {
     if (label case final label? when label.trim().isNotEmpty) 'label': label,
     'contextWindow': ?contextWindow,
     'efforts': ?efforts,
+    'effort': ?effort,
     'contexts': ?contexts,
     if (!images) 'images': false,
     if (!enabled) 'enabled': false,
@@ -336,6 +345,10 @@ class ProviderModel {
         ],
         _ => null,
       },
+      effort: switch (json['effort']) {
+        final String level when level.trim().isNotEmpty => level.trim(),
+        _ => null,
+      },
       images: json['images'] != false,
       enabled: json['enabled'] != false,
       custom: json['custom'] == true,
@@ -355,6 +368,7 @@ class ProviderModel {
       other.label == label &&
       other.contextWindow == contextWindow &&
       _sameList(other.efforts, efforts) &&
+      other.effort == effort &&
       _sameList(other.contexts, contexts) &&
       other.images == images &&
       other.enabled == enabled &&
@@ -369,6 +383,7 @@ class ProviderModel {
     id,
     label,
     contextWindow,
+    effort,
     efforts == null ? null : Object.hashAll(efforts!),
     contexts == null ? null : Object.hashAll(contexts!),
     images,

@@ -668,7 +668,36 @@ class _ModelEditDialogState extends State<ModelEditDialog> {
 
   /// The model's own efforts and contexts; null for the defaults.
   late List<String>? _efforts = _start?.efforts;
+  late String? _effort = _start?.effort;
   late List<int>? _contexts = _start?.contexts;
+
+  /// The efforts this model offers, as edited: the defaults while they are
+  /// the ones.
+  List<String> get _offeredEfforts => _efforts ?? ProviderModel.defaultEfforts;
+
+  /// The effort a session starts with: the one picked while it is offered,
+  /// else what the levels make the default.
+  String? get _followedEffort => switch (_effort) {
+    final effort? when _offeredEfforts.contains(effort) => effort,
+    _ =>
+      _offeredEfforts.contains(ProviderModel.defaultEffort)
+          ? ProviderModel.defaultEffort
+          : _offeredEfforts.firstOrNull,
+  };
+
+  /// The dropdown's entry for following the levels' own default, saying
+  /// which that is.
+  String _followingEffortLabel(AppLocalizations l10n) =>
+      l10n.modelsEffortDefaultFollow(switch (_followedEffort) {
+        final followed? => effortLabel(followed),
+        null => '—',
+      });
+
+  /// What the default effort's dropdown shows.
+  String _effortShown(AppLocalizations l10n) => switch (_effort) {
+    final picked? when _offeredEfforts.contains(picked) => effortLabel(picked),
+    _ => _followingEffortLabel(l10n),
+  };
   bool _tried = false;
 
   @override
@@ -783,6 +812,7 @@ class _ModelEditDialogState extends State<ModelEditDialog> {
               label: label.isEmpty ? null : label,
               contextWindow: tokens,
               efforts: _efforts,
+              effort: _offeredEfforts.contains(_effort) ? _effort : null,
               contexts: _contexts,
               images: _images,
               custom: true,
@@ -794,6 +824,7 @@ class _ModelEditDialogState extends State<ModelEditDialog> {
               label: () => label.isEmpty ? null : label,
               contextWindow: () => tokens,
               efforts: () => _efforts,
+              effort: () => _offeredEfforts.contains(_effort) ? _effort : null,
               contexts: () => _contexts,
               images: _images,
               kind: () => _keptKind,
@@ -1009,6 +1040,45 @@ class _ModelEditDialogState extends State<ModelEditDialog> {
                       ProviderModel.defaultEfforts,
                     ),
                   ),
+                ),
+              ),
+              _field(
+                l10n.modelsEffortDefault,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: SettingsDropdown(
+                        current: _effortShown(l10n),
+                        semanticLabel:
+                            '${l10n.modelsEffortDefault}: '
+                            '${_effortShown(l10n)}',
+                        entries: () => [
+                          IdeMenuAction(
+                            _followingEffortLabel(l10n),
+                            checked: !_offeredEfforts.contains(_effort),
+                            onSelected: () => setState(() => _effort = null),
+                          ),
+                          const IdeMenuSeparator(),
+                          for (final level in _offeredEfforts)
+                            IdeMenuAction(
+                              effortLabel(level),
+                              checked: _effort == level,
+                              onSelected: () => setState(() => _effort = level),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.modelsEffortDefaultDescription,
+                      style: _text(
+                        context,
+                        size: 12,
+                      ).copyWith(color: AppColors.textMuted),
+                    ),
+                  ],
                 ),
               ),
               _field(

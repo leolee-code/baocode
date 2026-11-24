@@ -584,6 +584,12 @@ void main() {
     await tester.enterText(fields.at(5), '64k');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
+    // Its own default effort, of those it still offers.
+    await tester.ensureVisible(find.textContaining('Follow the default'));
+    await tester.tap(find.textContaining('Follow the default'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('High').last);
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Does not take images'));
     await tester.tap(find.text('Does not take images'));
     await tester.pump();
@@ -596,6 +602,7 @@ void main() {
         label: 'Mine',
         contextWindow: 128000,
         efforts: ['none', 'low', 'medium', 'high', 'xhigh'],
+        effort: 'high',
         contexts: [
           64000,
           200000,

@@ -7508,11 +7508,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get modelsEffortInvalid => 'Letters, digits and dashes only.';
 
   @override
+  String get modelsEffortDefault => 'Default effort';
+
+  @override
+  String get modelsEffortDefaultDescription =>
+      'The effort a session starts with; the levels offered above are the ones it may be.';
+
+  @override
+  String modelsEffortDefaultFollow(String level) {
+    return 'Follow the default ($level)';
+  }
+
+  @override
   String get modelsContextOptions => 'Context Lengths';
 
   @override
   String get modelsContextOptionsDescription =>
-      'Offered in the model picker; the default context is among them.';
+      'Offered in the model picker; the default context is the one above, and is among them.';
 
   @override
   String get modelsContextAddHint => 'e.g. 128K';

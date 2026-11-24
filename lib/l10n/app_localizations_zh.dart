@@ -7065,10 +7065,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get modelsEffortInvalid => '只能包含字母、数字和连字符。';
 
   @override
+  String get modelsEffortDefault => '默认推理强度';
+
+  @override
+  String get modelsEffortDefaultDescription => '新会话起手使用的档位，只能取上面提供的档位。';
+
+  @override
+  String modelsEffortDefaultFollow(String level) {
+    return '跟随默认（$level）';
+  }
+
+  @override
   String get modelsContextOptions => '上下文档位';
 
   @override
-  String get modelsContextOptionsDescription => '在模型选择中提供；默认上下文总在其中。';
+  String get modelsContextOptionsDescription =>
+      '在模型选择中提供；默认档位由上面的「默认上下文」决定，且总在列表中。';
 
   @override
   String get modelsContextAddHint => '如 128K';

@@ -262,6 +262,12 @@ void main() {
       expect(model.initialEffort, 'medium');
       expect(model.contextOptions, ProviderModel.defaultContexts);
       expect(model.initialContext, 200000);
+      expect(model.effort, isNull);
+      expect(model.toJson().containsKey('effort'), isFalse);
+      expect(
+        ProviderModel.fromJson({'id': 'm', 'effort': ' high '})!.effort,
+        'high',
+      );
     });
 
     test('a model\'s own efforts and contexts are offered, its default '
@@ -282,6 +288,24 @@ void main() {
         [200000, 256000, 300000, 400000, 500000, 800000, 1048576],
       );
       expect(const ProviderModel(id: 'm', efforts: []).initialEffort, isNull);
+      // Its own default effort, while that is one of those offered; gone
+      // from them, the levels' own default is followed again.
+      expect(
+        const ProviderModel(
+          id: 'm',
+          efforts: ['low', 'high'],
+          effort: 'high',
+        ).initialEffort,
+        'high',
+      );
+      expect(
+        const ProviderModel(
+          id: 'm',
+          efforts: ['low', 'high'],
+          effort: 'medium',
+        ).initialEffort,
+        'low',
+      );
       expect(
         const ProviderModel(id: 'm', contexts: [64000]).initialContext,
         64000,

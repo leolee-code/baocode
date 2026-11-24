@@ -5306,8 +5306,18 @@
   "modelsEffortOptionsDescription": "Offered in the model picker; Medium is picked unless another is.",
   "modelsEffortAddHint": "e.g. minimal",
   "modelsEffortInvalid": "Letters, digits and dashes only.",
+  "modelsEffortDefault": "Default effort",
+  "modelsEffortDefaultDescription": "The effort a session starts with; the levels offered above are the ones it may be.",
+  "modelsEffortDefaultFollow": "Follow the default ({level})",
+  "@modelsEffortDefaultFollow": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
   "modelsContextOptions": "Context Lengths",
-  "modelsContextOptionsDescription": "Offered in the model picker; the default context is among them.",
+  "modelsContextOptionsDescription": "Offered in the model picker; the default context is the one above, and is among them.",
   "modelsContextAddHint": "e.g. 128K",
   "modelsOptionAdd": "Add",
   "modelsOptionRemove": "Remove {name}",

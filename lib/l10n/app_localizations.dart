@@ -12141,6 +12141,24 @@ abstract class AppLocalizations {
   /// **'Letters, digits and dashes only.'**
   String get modelsEffortInvalid;
 
+  /// No description provided for @modelsEffortDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default effort'**
+  String get modelsEffortDefault;
+
+  /// No description provided for @modelsEffortDefaultDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The effort a session starts with; the levels offered above are the ones it may be.'**
+  String get modelsEffortDefaultDescription;
+
+  /// No description provided for @modelsEffortDefaultFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the default ({level})'**
+  String modelsEffortDefaultFollow(String level);
+
   /// No description provided for @modelsContextOptions.
   ///
   /// In en, this message translates to:
@@ -12150,7 +12168,7 @@ abstract class AppLocalizations {
   /// No description provided for @modelsContextOptionsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Offered in the model picker; the default context is among them.'**
+  /// **'Offered in the model picker; the default context is the one above, and is among them.'**
   String get modelsContextOptionsDescription;
 
   /// No description provided for @modelsContextAddHint.
